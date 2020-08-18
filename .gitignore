@@ -31,6 +31,3 @@
 *.out
 *.app
 sground
-
-# Shader
-*.glsl
