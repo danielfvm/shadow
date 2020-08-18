@@ -3,7 +3,7 @@ A real shader background for your Linux Desktop
 
 ## Why should I use this?
 There is no reason to use this. It is waist of resources,
-but it is nice to look at. To save resources you can
+but it looks good. To save resources you can
 decrease the quality level.
 
 ## Installation
@@ -26,3 +26,8 @@ quality default: 1.0
 
 speed default: 1.0
 (higher: faster speed)
+
+## Future Work
+* Mouse support
+* Multi Monitor support
+* Support for tiling window managers
