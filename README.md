@@ -21,8 +21,8 @@ sground <path> [quality]
 sground <path> [quality] [speed]
 ```
 
-quality default: 1
+quality default: 1.0
 (higher: lower quality)
 
-speed default: 1
+speed default: 1.0
 (higher: faster speed)
