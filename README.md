@@ -6,6 +6,14 @@ There is no reason to use this. It is waist of resources,
 but it looks good. To save resources you can
 decrease the quality level.
 
+## Support
+Should work on most (Tiling) Window Managers with normal
+x11 root background.
+Currently tested on:
+* i3wm (working)
+* awesome (working)
+* Gnome (not working)
+
 ## Installation
 ```
 git clone https://github.com/danielfvm/SGround
