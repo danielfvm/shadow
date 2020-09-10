@@ -27,6 +27,9 @@ quality default: 1.0
 speed default: 1.0
 (higher: faster speed)
 
+You can write your own fragment shader, or get one
+from: http://glslsandbox.com/
+
 ## Future Work
 * Mouse support
 * Multi Monitor support
