@@ -1,14 +1,9 @@
 # SGround
-A real shader background for your Linux Desktop
+A real shader background for your Linux (Tiling) Window Manager.
+Supports Mouse interaction with Shader.
 
-## Why should I use this?
-There is no reason to use this. It is waist of resources,
-but it looks good. To save resources you can
-decrease the quality level.
-
-## Support
-Should work on most (Tiling) Window Managers with normal
-x11 root background.
+## Supported WM
+Should work on most (Tiling) Window Managers with normal x11 root background.
 Currently tested on:
 * i3wm (working)
 * awesome (working)
@@ -39,6 +34,5 @@ You can write your own fragment shader, or get one
 from: http://glslsandbox.com/
 
 ## Future Work
-* Mouse support
 * Multi Monitor support
-* Support for tiling window managers
+* Support for Gnome
