@@ -395,10 +395,10 @@ ToonGetRootWindow(Display *display, int screen, Window *clientparent)
       XFree((char *) workspace);
     }
   }
-  if (background) {
-    return background;
-  } else {
+//  if (background) {
+  //  return background;
+  //} else {
     printf("Drawing on root\n");
     return root;
-  }
+  //}
 }

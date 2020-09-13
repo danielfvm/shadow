@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS  = -g -Wall
-LDFLAGS = -Wall -lGL -lGLEW `imlib2-config --libs` -L/usr/X11/lib -lX11
+CFLAGS  = -lm -g -Wall
+LDFLAGS = -lm -Wall -lGL -lGLEW `imlib2-config --libs` -L/usr/X11/lib -lX11
 TARGET = sground
 
 default:  dir main.o toon.o shader.o 
