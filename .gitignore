@@ -31,3 +31,6 @@
 *.out
 *.app
 sground
+
+# Shaders
+*.glsl

@@ -32,18 +32,17 @@ XVisualInfo *vi;
 
 Window root;
 
-XVisualInfo             *vi;
-Colormap                cmap;
-XSetWindowAttributes    swa;
-Window                  win;
-GLXContext              glc;
-XWindowAttributes       gwa;
+/* Window used in background & window mode */
+Window win;
+XWindowAttributes gwa;
 
 
 void init(char *filepath) {
-    Window parent;
     GLXContext glc;
     int screen;
+
+    Colormap cmap;
+    XSetWindowAttributes swa;
 
     /* open display, screen & root */
     if (!(dpy = XOpenDisplay(NULL))) {
@@ -133,7 +132,6 @@ unsigned int createRGB(int r, int g, int b) {
 }
 
 void draw() {
-    Window parent;
     XGCValues gcvalues;
 	GC gc;
     Atom prop_root, prop_esetroot, type;
@@ -199,17 +197,8 @@ void draw() {
     int win_x, win_y;
     unsigned int mask_return;
 
-
     while (1) {
 
-        /* handle x11 window events, if in window mode */
-        /*XNextEvent(dpy, &xev);
-        
-        if (xev.type == Expose) {
-        	XGetWindowAttributes(dpy, win, &gwa);
-            width = gwa.width;
-            height = gwa.height;
-        }*/
         if (strcmp(mode, "window") == 0) {
             XGetWindowAttributes(dpy, win, &gwa);
             width = gwa.width;
@@ -237,7 +226,7 @@ void draw() {
         shader_bind(shader);
         shader_set_float(locTime, (float)delta_us * 0.000001f * speed);
         shader_set_vec2(locResolution, width * quality, height * quality);
-        shader_set_vec2(locMouse, (float)root_x / width, (float)root_y / height);
+        shader_set_vec2(locMouse, (float)(root_x) / width, 1.0 - (float)(root_y) / height);
         
         /* render shader on framebuffer */
         glPushMatrix();
@@ -266,17 +255,17 @@ void draw() {
         /* render texture on screen */
         glPushMatrix();
             glScalef(1.0 / quality, 1.0 / quality, 1.0);
-            glTranslatef(quality - 1.0, quality - 1.0, 0.0);
+            glTranslatef(0.0, quality - 1.0, 0.0);
             glColor3f(1.0, 1.0, 1.0);
             glBegin(GL_QUADS);
-                glTexCoord2f(1, 0);
-                glVertex2f(0, 1);
-                glTexCoord2f(0, 0);
-                glVertex2f(1, 1);
                 glTexCoord2f(0, 1);
-                glVertex2f(1, 0);
-                glTexCoord2f(1, 1);
                 glVertex2f(0, 0);
+                glTexCoord2f(1, 1);
+                glVertex2f(1, 0);
+                glTexCoord2f(1, 0);
+                glVertex2f(1, 1);
+                glTexCoord2f(0, 0);
+                glVertex2f(0, 1);
             glEnd();
         glPopMatrix();
 
@@ -287,13 +276,14 @@ void draw() {
 
             int f = width*height;
             for (i = 0; i < f; ++ i) {
-                buffer_hex[f-i] = createRGB(buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]);
+                buffer_hex[i] = createRGB(buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]);
             }
 
             Imlib_Image img = imlib_create_image_using_data(width, height, buffer_hex);
 
             imlib_context_set_image(img);
             imlib_context_set_drawable(pmap_d1);
+            imlib_image_flip_vertical();
             imlib_render_image_on_drawable_at_size(0, 0, width, height);
             imlib_free_image_and_decache();
 
@@ -306,7 +296,7 @@ void draw() {
                 exit(EXIT_FAILURE);
             }
 
-            root2 = /*ToonGetRootWindow(dpy, DefaultScreen(dpy), &parent); */RootWindow(dpy2, DefaultScreen(dpy2));
+            root2 = RootWindow(dpy2, DefaultScreen(dpy2));
             depth2 = DefaultDepth(dpy2, DefaultScreen(dpy2));
             XSync(dpy, False);
             pmap_d2 = XCreatePixmap(dpy2, root2, width, height, depth2);
