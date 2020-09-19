@@ -18,7 +18,6 @@
 
 #include "shader.h"
 #include "arghandler.h"
-#include "toon.h"
 
 /* shader settings */
 float quality = 1;
@@ -51,7 +50,7 @@ void init(char *filepath) {
     }
 
     screen = DefaultScreen(dpy);
-    root = RootWindow(dpy, screen);//ToonGetRootWindow(dpy, screen, &parent);
+    root = RootWindow(dpy, screen);
 
     /* setup imlib */
     imlib_context_set_display(dpy);
