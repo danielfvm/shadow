@@ -3,8 +3,14 @@ CFLAGS  = -lm -g -Wall
 LDFLAGS = -lm -Wall -lGL -lGLEW `imlib2-config --libs` -L/usr/X11/lib -lX11
 TARGET = sground
 
-default:  dir main.o shader.o 
+default: dir main.o shader.o 
 	$(CC) $(LDFLAGS) -o bin/${TARGET} obj/main.o obj/shader.o
+
+install:
+	mv bin/${TARGET} /usr/bin/${TARGET}
+
+uninstall:	
+	rm /usr/bin/${TARGET}
 
 dir:
 	mkdir -p bin obj
