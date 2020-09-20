@@ -7,7 +7,7 @@ default: dir main.o shader.o
 	$(CC) $(LDFLAGS) -o bin/${TARGET} obj/main.o obj/shader.o
 
 install:
-	mv bin/${TARGET} /usr/bin/${TARGET}
+	cp bin/${TARGET} /usr/bin/${TARGET}
 
 uninstall:	
 	rm /usr/bin/${TARGET}
