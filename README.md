@@ -1,38 +1,39 @@
-# SGround
-A real shader background for your Linux (Tiling) Window Manager.
-Supports Mouse interaction with Shader.
+# Show 
+Show stands for `Shaders On Wallpaper` and it can render a realtime glsl shader on your Linux Desktop Background.
+It is compatible with many shaders from [glslsandbox.com](http://glslsandbox.com/).
+Duo to different Desktop Environments and Window Managers, there are currently 3 Modes you can choose from.
 
-## Supported WM
-Should work on most (Tiling) Window Managers with normal x11 root background.
-Currently tested on:
-* i3wm (working)
-* awesome (working)
-* Gnome (not working)
+* background (default)
+In this mode a new window is being created. It is being set to the background using a `typehint`. This might
+not being supported by your Window Manager (like i3), but should work on most desktop environments (Gnome, Xfce, Awesome, ...)
+
+* root
+In this mode it will render the shader on the X11 Root Window. This mode has a lot of cpu usage and wont work 
+in most Desktop Environments. You should only use this option if you are running a Window Manager that doesn't 
+support the `background` mode.
+
+* window
+This mode might be usefull for those who want to develop a shader. It will create a normal window with a shader.
 
 ## Installation
 ```
-git clone https://github.com/danielfvm/SGround
-cd SGround
+git clone https://github.com/danielfvm/show
+cd show
 make
 make install
 ```
 
 ## Usage
 ```
-sground <path>
-sground <path> [quality]
-sground <path> [quality] [speed]
+Usage: show <path> [options]
+Options:
+  -q, --quality		Changes animation speed, default 1.
+  -s, --speed  		Changes quality level of the shader, default 1.
+  -m, --mode   		Changes rendering mode. Modes: root, window, background
+Example:
+  show example.glsl -q 0.5 -m background
 ```
 
-quality default: 1.0
-(higher: lower quality)
-
-speed default: 1.0
-(higher: faster speed)
-
-You can write your own fragment shader, or get one
-from: http://glslsandbox.com/
-
 ## Future Work
+* Fix not working shaders from glslsandbox.com (missing `uniforms`)
 * Multi Monitor support
-* Support for Gnome

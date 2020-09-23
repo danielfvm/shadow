@@ -19,10 +19,11 @@
 #include "shader.h"
 #include "arghandler.h"
 
-/* shader settings */
-float quality = 1;
-float speed = 1;
-char* mode = NULL;
+/* settings */
+float quality = 1;  // shader quality
+float speed = 1;    // shader animation speed
+float opacity = 1;  // background transparency
+char* mode = NULL;  // background mode
 
 Shader shader;
 
@@ -70,7 +71,7 @@ void init(char *filepath) {
     int width = s->width;
     int height = s->height;
 
-    /* create a new window if window mode */
+    /* create a new window if mode: window, background */
     if (strcmp(mode, "root") != 0) {
         cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
         swa.colormap = cmap;
@@ -83,6 +84,12 @@ void init(char *filepath) {
             XChangeProperty(dpy, win, window_type, XA_ATOM, 32, PropModeReplace, (unsigned char *) &value, 1);
         } else {
             win = XCreateWindow(dpy, root, 0, 0, 600, 600, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
+        }
+
+        // make window transparent
+        if (opacity < 1) {
+            uint32_t cardinal_alpha = (uint32_t) (opacity * (uint32_t)-1) ;
+            XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", 0), XA_CARDINAL, 32, PropModeReplace, (uint8_t*) &cardinal_alpha,1) ;
         }
 
         XMapWindow(dpy, win);
@@ -131,6 +138,8 @@ unsigned int createRGB(int r, int g, int b) {
 }
 
 void draw() {
+
+    /* Used for setting pixmap to root window */
     XGCValues gcvalues;
 	GC gc;
     Atom prop_root, prop_esetroot, type;
@@ -196,8 +205,12 @@ void draw() {
     int win_x, win_y;
     unsigned int mask_return;
 
-    while (1) {
 
+    // TODO: Exit condition
+    while (1) {
+        // TODO: add framerate limiter here
+
+        // TODO: Convert mode to enum
         if (strcmp(mode, "window") == 0) {
             XGetWindowAttributes(dpy, win, &gwa);
             width = gwa.width;
@@ -271,10 +284,10 @@ void draw() {
         if (strcmp(mode, "root") == 0) { // on root mode, get pixels from gl context and convert it to an Pixbuf
 
             /* create Imlib_Image from current Frame */
-            glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage :/
+            glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage here :/
 
             int f = width*height;
-            for (i = 0; i < f; ++ i) {
+            for (i = 0; i < f; ++ i) { // and here too
                 buffer_hex[i] = createRGB(buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]);
             }
 
@@ -361,19 +374,21 @@ void draw() {
 }
 
 int main(int argc, char **argv) {
-    ah_init(argc, argv);
+    ah_init(argc, argv); // simple argument handler
 
-    quality = fmin(fmax(atof(ah_or_def(ah_get_value_of_args("-q", "--quality"), "1")), 0.01), 1);
+    quality = fmin(fmax(atof(ah_or_def(ah_get_value_of_args("-q", "--quality"), "1")), 0.01), 1); // def 1, max 1, min 0.01
     speed   = atof(ah_or_def(ah_get_value_of_args("-s", "--speed"), "1"));
-    mode    = ah_or_def(ah_get_value_of_args("-m", "--mode"), "root");
+    mode    = ah_or_def(ah_get_value_of_args("-m", "--mode"), "background");
+    opacity = atof(ah_or_def(ah_get_value_of_args("-o", "--opacity"), "1"));
 
     if (argc <= 1) {
-        printf("sground - A Shader background for your desktop\n\n");
-        printf("Usage: sground <path> [options]\n");
+        printf("show - A Shader background for your desktop\n\n");
+        printf("Usage: show <path> [options]\n");
         printf("Options:\n");
         printf("  -q, --quality\t\tChanges animation speed, default 1.\n");
         printf("  -s, --speed  \t\tChanges quality level of the shader, default 1.\n");
         printf("  -m, --mode   \t\tChanges rendering mode. Modes: root, window, background\n");
+        printf("  -o, --opacity\t\tSets background window transparency if in window/background mode\n");
     } else {
         if (access(argv[1], F_OK) == -1) {
             fprintf(stderr, "File at '%s' does not exist\n", argv[1]);
