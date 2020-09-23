@@ -30,9 +30,13 @@ Options:
   -q, --quality		Changes animation speed, default 1.
   -s, --speed  		Changes quality level of the shader, default 1.
   -m, --mode   		Changes rendering mode. Modes: root, window, background
+  -o, --opacity		Sets background window transparency if in window/background mode
+
 Example:
   show example.glsl -q 0.5 -m background
 ```
+
+Info: Opcaity doesn't work on Wayland.
 
 ## Future Work
 * Fix not working shaders from glslsandbox.com (missing `uniforms`)
