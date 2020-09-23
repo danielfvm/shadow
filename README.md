@@ -36,7 +36,7 @@ Example:
   show example.glsl -q 0.5 -m background
 ```
 
-Info: Opcaity doesn't work on Wayland.
+Info: Opacity doesn't work on Wayland.
 
 ## Future Work
 * Fix not working shaders from glslsandbox.com (missing `uniforms`)
