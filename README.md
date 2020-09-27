@@ -15,6 +15,13 @@ support the `background` mode.
 * window
 This mode might be usefull for those who want to develop a shader. It will create a normal window with a shader.
 
+## Features
+* Compatible with [glslsandbox.com](http://glslsandbox.com/)
+* Three different render modes
+* Change speed & quality
+* Opacity on wallpaper
+* Mouse support
+
 ## Installation
 ```
 git clone https://github.com/danielfvm/show
@@ -36,7 +43,9 @@ Example:
   show example.glsl -q 0.5 -m background
 ```
 
-Info: Opacity doesn't work on Wayland.
+### Info: 
+* Opacity doesn't work on Wayland.
+* Use `root` mode on i3wm
 
 ## Future Work
 * Fix not working shaders from glslsandbox.com (missing `uniforms`)
