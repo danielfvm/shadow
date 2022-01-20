@@ -1,7 +1,7 @@
 /* Shader program id provided by opengl */
 typedef unsigned long Shader;
 
-/* 
+/*
  *  Dont forget to free buffer
  */
 char* readFile(char *filepath);
@@ -33,7 +33,7 @@ void shader_set_float(const int loc, float value);
 
 /*
  *  Sets the vec2 uniform in the shader program
- */  
+ */
 void shader_set_vec2(const int loc, float value1, float value2);
 
 /*
