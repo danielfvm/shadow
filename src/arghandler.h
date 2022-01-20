@@ -1,3 +1,8 @@
+#ifndef showArghandlerH
+#define showArghandlerH
+
+#include <string.h>
+
 char **argv;
 int argc;
 
@@ -37,3 +42,4 @@ char* ah_get_value_of_args(char *arg1, char *arg2) {
 char* ah_or_def(char *val, char *def) {
 	return val == NULL ? def : val;
 }
+#endif
