@@ -385,8 +385,8 @@ int main(int argc, char **argv) {
 		printf("show - A Shader background for your desktop\n\n");
 		printf("Usage: show <path> [options]\n");
 		printf("Options:\n");
-		printf("  -q, --quality\t\tChanges animation speed, default 1.\n");
-		printf("  -s, --speed  \t\tChanges quality level of the shader, default 1.\n");
+		printf("  -q, --quality\t\tChanges quality level of the shader, default 1.\n");
+		printf("  -s, --speed  \t\tChanges animation speed, default 1.\n");
 		printf("  -m, --mode   \t\tChanges rendering mode. Modes: root, window, background\n");
 		printf("  -o, --opacity\t\tSets background window transparency if in window/background mode\n");
 	} else {

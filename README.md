@@ -34,8 +34,8 @@ make install
 ```
 Usage: show <path> [options]
 Options:
-  -q, --quality		Changes animation speed, default 1.
-  -s, --speed  		Changes quality level of the shader, default 1.
+  -q, --quality		Changes quality level of the shader, default 1.
+  -s, --speed  		Changes animation speed, default 1.
   -m, --mode   		Changes rendering mode. Modes: root, window, background
   -o, --opacity		Sets background window transparency if in window/background mode
 
