@@ -1,19 +1,19 @@
 # Show 
-Show stands for `Shaders On Wallpaper` and it can render a realtime glsl shader on your Linux Desktop Background.
+Show stands for `Shaders On Wallpaper` and it can render a realtime glsl shader on your Linux desktop.
 It is compatible with many shaders from [glslsandbox.com](http://glslsandbox.com/).
-Duo to different Desktop Environments and Window Managers, there are currently 3 Modes you can choose from.
+Duo to different desktop environments and window managers, there are currently 3 modes you can choose from.
 
 * background (default)
 In this mode a new window is being created. It is being set to the background using a `typehint`. This might
-not being supported by your Window Manager (like i3), but should work on most desktop environments (Gnome, Xfce, Awesome, ...)
+not being supported by your window manager (e.g. i3), but should work on most desktop environments (Gnome, Xfce, Awesome, ...)
 
 * root
-In this mode it will render the shader on the X11 Root Window. This mode has a lot of cpu usage and wont work 
-in most Desktop Environments. You should only use this option if you are running a Window Manager that doesn't 
+In this mode it will render the shader on the X11 root window. This mode has a lot of cpu usage and wont work 
+in most desktop environments. You should only use this option if you are running a window manager that does not
 support the `background` mode.
 
 * window
-This mode might be usefull for those who want to develop a shader. It will create a normal window with a shader.
+This mode might be useful for those who want to develop a shader. It will create a normal window with a shader on top.
 
 ## Features
 * Compatible with [glslsandbox.com](http://glslsandbox.com/)
@@ -49,4 +49,4 @@ Example:
 
 ## Future Work
 * Fix not working shaders from glslsandbox.com (missing `uniforms`)
-* Multi Monitor support
+* Multi monitor support
