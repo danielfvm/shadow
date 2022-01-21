@@ -157,17 +157,12 @@ void init(char *filepath) {
 	}
 }
 
-/* 3 color values to 1 hex color value */
-unsigned int createRGB(int r, int g, int b) {
-	return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
-}
-
 void draw() {
 	/* Used for setting pixmap to root window */
 	XGCValues gcvalues;
 	GC gc;
 	Atom prop_root, prop_esetroot, type;
-	int format, i;
+	int format;
 	unsigned long length, after;
 	unsigned char *data_root = NULL, *data_esetroot = NULL;
 	Pixmap pmap_d1, pmap_d2;
@@ -302,7 +297,8 @@ void draw() {
 		glEnd();
 		glPopMatrix();
 
-		if (options.mode == ROOT) { // on root mode, get pixels from gl context and convert it to an Pixbuf
+		// in root mode, get pixels from gl context and convert it to an Pixbuf and draw it on root window
+		if (options.mode == ROOT) { 
 
 			/* create Imlib_Image from current Frame */
 			glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage here :/
