@@ -27,10 +27,10 @@ Show will create a normal window displaying the effect.
 
 ## Installation
 ```
-git clone https://github.com/danielfvm/show
-cd show
-make
-make install
+$ git clone https://github.com/danielfvm/show.git
+$ cd show
+$ meson <build_dir> --prefix=<installation_dir>
+$ ninja -C <build_dir> install
 ```
 
 ## Usage
