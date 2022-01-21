@@ -90,7 +90,7 @@ Shader shader_compile(char* filepath) {
 
 	/* fragment Shader */
 	fragment = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragment, 1, &fShaderCode, NULL);
+	glShaderSource(fragment, 1, (const GLchar *const *)&fShaderCode, NULL);
 	glCompileShader(fragment);
 
 	if (!shader_check_compile_errors(fragment, "FRAGMENT")) {
