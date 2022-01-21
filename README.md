@@ -1,26 +1,29 @@
-# Show 
-Show stands for `Shaders On Wallpaper` and it can render a realtime glsl shader on your Linux desktop.
+# Show
+"Show" stands for `Shaders On Wallpaper` and it renders a realtime glsl shader on your Linux desktop.
 It is compatible with many shaders from [glslsandbox.com](http://glslsandbox.com/).
-Duo to different desktop environments and window managers, there are currently 3 modes you can choose from.
 
-* background (default)
-In this mode a new window is being created. It is being set to the background using a `typehint`. This might
-not being supported by your window manager (e.g. i3), but should work on most desktop environments (Gnome, Xfce, Awesome, ...)
+There are currently 3 available render modes:
 
-* root
-In this mode it will render the shader on the X11 root window. This mode has a lot of cpu usage and wont work 
-in most desktop environments. You should only use this option if you are running a window manager that does not
-support the `background` mode.
+* Background (default):
+The Show window is being set to the background using a `typehint`.
+This might not be supported by your window manager (e.g. i3),
+but works on most desktop environments (Gnome, Xfce, Awesome, KDE, ...)
 
-* window
-This mode might be useful for those who want to develop a shader. It will create a normal window with a shader on top.
+* Root:
+Show will render the shader on the X11 root window.
+This mode has a lot of cpu usage and wont work in most desktop environments.
+This is only advised if the `background` mode does not work for you.
+
+* Window:
+This mode might be useful for shader developers.
+Show will create a normal window displaying the effect.
 
 ## Features
 * Compatible with [glslsandbox.com](http://glslsandbox.com/)
 * Three different render modes
 * Change speed & quality
 * Opacity on wallpaper
-* Mouse support
+* Mouse position support
 
 ## Installation
 ```
@@ -43,7 +46,7 @@ Example:
   show example.glsl -q 0.5 -m background
 ```
 
-### Info: 
+### Info:
 * Opacity doesn't work on Wayland.
 * Use `root` mode on i3wm
 
