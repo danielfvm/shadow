@@ -6,6 +6,7 @@
 
 #include <Imlib2.h>
 
+#include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 
@@ -17,15 +18,38 @@
 #include <math.h>
 
 #include "shader.h"
-#include "arghandler.h"
 
-/* settings */
-float quality = 1;  // shader quality
-float speed = 1;    // shader animation speed
-float opacity = 1;  // background transparency
-char* mode = NULL;  // background mode
+typedef struct {
+	float quality;  // shader quality
+	float speed;    // shader animation speed
+	float opacity;  // background transparency
 
-Shader shader;
+	enum Mode {
+		BACKGROUND,
+		WINDOW,
+		ROOT,
+	} mode;
+
+} Option;
+
+static Option options = {
+	.quality = 1,
+	.speed = 1,
+	.opacity = 1,
+	.mode = BACKGROUND,
+};
+
+static char help[] = {
+	"Usage: %s <path> [options]\n"
+	"Options:\n"
+	"  -q, --quality\t\tChanges quality level of the shader, default 1.\n"
+	"  -s, --speed  \t\tChanges animation speed, default 1.\n"
+	"  -m, --mode   \t\tChanges rendering mode. Modes: root, window, background\n"
+	"  -o, --opacity\t\tSets background window transparency if in window/background mode\n"
+};
+
+static Shader shader;
+
 
 Display *dpy;
 XVisualInfo *vi;
@@ -72,12 +96,12 @@ void init(char *filepath) {
 	int height = s->height;
 
 	/* create a new window if mode: window, background */
-	if (strcmp(mode, "root") != 0) {
+	if (options.mode == WINDOW || options.mode == BACKGROUND) {
 		cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 		swa.colormap = cmap;
 		swa.event_mask = ExposureMask;
 
-		if (strcmp(mode, "background") == 0) {
+		if (options.mode == BACKGROUND) {
 			win = XCreateWindow(dpy, root, 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
 			Atom window_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 			long value = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
@@ -87,13 +111,13 @@ void init(char *filepath) {
 		}
 
 		// make window transparent
-		if (opacity < 1) {
-			uint32_t cardinal_alpha = (uint32_t) (opacity * (uint32_t)-1) ;
+		if (options.opacity < 1) {
+			uint32_t cardinal_alpha = (uint32_t) (options.opacity * (uint32_t)-1);
 			XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", 0), XA_CARDINAL, 32, PropModeReplace, (uint8_t*) &cardinal_alpha,1) ;
 		}
 
 		XMapWindow(dpy, win);
-		XStoreName(dpy, win, "sground");
+		XStoreName(dpy, win, "Show");
 	}
 
 	/* create new context for offscreen rendering */
@@ -102,7 +126,7 @@ void init(char *filepath) {
 		exit(EXIT_FAILURE);
 	}
 
-	if (strcmp(mode, "root") == 0) {
+	if (options.mode == ROOT) {
 		glXMakeCurrent(dpy, root, glc);
 	} else {
 		glXMakeCurrent(dpy, win, glc);
@@ -115,13 +139,14 @@ void init(char *filepath) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
 	/* init Glew */
 	GLenum err = glewInit();
 	if (err != GLEW_OK || !GLEW_VERSION_2_1) {
-		fputs("Failed to init GLEW", stderr);
+		fprintf(stderr, "Failed to init GLEW\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -138,7 +163,6 @@ unsigned int createRGB(int r, int g, int b) {
 }
 
 void draw() {
-
 	/* Used for setting pixmap to root window */
 	XGCValues gcvalues;
 	GC gc;
@@ -180,7 +204,7 @@ void draw() {
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -197,32 +221,29 @@ void draw() {
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 
 	/* used for converting framebuffer to Imlib_Image */
-	unsigned char* buffer = (unsigned char*) malloc(width * height * 3);
-	unsigned int* buffer_hex = (unsigned int*) malloc(width * height * 4);
+	unsigned int* buffer = (unsigned int*) malloc(width * height * 4);
 
 	Window window_returned;
 	int root_x, root_y;
 	int win_x, win_y;
 	unsigned int mask_return;
 
-
 	// TODO: Exit condition
 	while (1) {
 		// TODO: add framerate limiter here
 
-		// TODO: Convert mode to enum
-		if (strcmp(mode, "window") == 0) {
+		if (options.mode == WINDOW) {
 			XGetWindowAttributes(dpy, win, &gwa);
 			width = gwa.width;
 			height = gwa.height;
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		}
 
 		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 		uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
 
 		/* change viewport, and scale it down depending on quality level */
-		glViewport(0, 0, width * quality, height * quality);
+		glViewport(0, 0, width * options.quality, height * options.quality);
 
 		/* clear Framebuffer */
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -236,8 +257,8 @@ void draw() {
 
 		/* bind shader background */
 		shader_bind(shader);
-		shader_set_float(locTime, (float)delta_us * 0.000001f * speed);
-		shader_set_vec2(locResolution, width * quality, height * quality);
+		shader_set_float(locTime, (float)delta_us * 0.000001f * options.speed);
+		shader_set_vec2(locResolution, width * options.quality, height * options.quality);
 		shader_set_vec2(locMouse, (float)(root_x) / width, 1.0 - (float)(root_y) / height);
 
 		/* render shader on framebuffer */
@@ -266,8 +287,8 @@ void draw() {
 
 		/* render texture on screen */
 		glPushMatrix();
-		glScalef(1.0 / quality, 1.0 / quality, 1.0);
-		glTranslatef(0.0, quality - 1.0, 0.0);
+		glScalef(1.0 / options.quality, 1.0 / options.quality, 1.0);
+		glTranslatef(0.0, options.quality - 1.0, 0.0);
 		glColor3f(1.0, 1.0, 1.0);
 		glBegin(GL_QUADS);
 		glTexCoord2f(0, 1);
@@ -281,18 +302,12 @@ void draw() {
 		glEnd();
 		glPopMatrix();
 
-		if (strcmp(mode, "root") == 0) { // on root mode, get pixels from gl context and convert it to an Pixbuf
+		if (options.mode == ROOT) { // on root mode, get pixels from gl context and convert it to an Pixbuf
 
 			/* create Imlib_Image from current Frame */
-			glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage here :/
+			glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage here :/
 
-			int f = width*height;
-			for (i = 0; i < f; ++ i) { // and here too
-				buffer_hex[i] = createRGB(buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]);
-			}
-
-			Imlib_Image img = imlib_create_image_using_data(width, height, buffer_hex);
-
+			Imlib_Image img = imlib_create_image_using_data(width, height, buffer);
 			imlib_context_set_image(img);
 			imlib_context_set_drawable(pmap_d1);
 			imlib_image_flip_vertical();
@@ -370,34 +385,47 @@ void draw() {
 	}
 
 	free(buffer);
-	free(buffer_hex);
 }
 
 int main(int argc, char **argv) {
-	ah_init(argc, argv); // simple argument handler
 
-	quality = fmin(fmax(atof(ah_or_def(ah_get_value_of_args("-q", "--quality"), "1")), 0.01), 1); // def 1, max 1, min 0.01
-	speed   = atof(ah_or_def(ah_get_value_of_args("-s", "--speed"), "1"));
-	mode    = ah_or_def(ah_get_value_of_args("-m", "--mode"), "background");
-	opacity = atof(ah_or_def(ah_get_value_of_args("-o", "--opacity"), "1"));
-
+	// Check for arguments
 	if (argc <= 1) {
-		printf("show - A Shader background for your desktop\n\n");
-		printf("Usage: show <path> [options]\n");
-		printf("Options:\n");
-		printf("  -q, --quality\t\tChanges quality level of the shader, default 1.\n");
-		printf("  -s, --speed  \t\tChanges animation speed, default 1.\n");
-		printf("  -m, --mode   \t\tChanges rendering mode. Modes: root, window, background\n");
-		printf("  -o, --opacity\t\tSets background window transparency if in window/background mode\n");
-	} else {
-		if (access(argv[1], F_OK) == -1) {
-			fprintf(stderr, "File at '%s' does not exist\n", argv[1]);
-			return EXIT_FAILURE;
-		}
-
-		init(argv[1]);
-		draw();
+        printf(help, argv[0]);
+		return 0;
 	}
+
+	// Handle arguments
+	for (int i = 2; i < argc - 1; ++ i) {
+		if (argv[i][1] == 'q' || strcmp(argv[i], "--quality") == 0) {
+			options.quality = fmin(fmax(atof(argv[i+1]), 0.01), 1);
+		} else if (argv[i][1] == 's' || strcmp(argv[i], "--speed") == 0) {
+			options.speed = atof(argv[i+1]);
+		} else if (argv[i][1] == 'o' || strcmp(argv[i], "--opacity") == 0) {
+			options.opacity = atof(argv[i+1]);
+		} else if (argv[i][1] == 'm' || strcmp(argv[i], "--mode") == 0) {
+			if (strcmp(argv[i+1], "root") == 0) {
+				options.mode = ROOT;
+			} else if (strcmp(argv[i+1], "window") == 0) {
+				options.mode = WINDOW;
+			} else if (strcmp(argv[i+1], "background") == 0) {
+				options.mode = BACKGROUND;
+			} else {
+				printf("Mode '%s' does not exist\n\n", argv[i+1]);
+				printf(help, argv[0]);
+				return EXIT_FAILURE;
+			}
+		}
+	}
+
+	// Check if file exists
+	if (access(argv[1], F_OK) == -1) {
+		fprintf(stderr, "ERROR: File at '%s' does not exist\n", argv[1]);
+		return EXIT_FAILURE;
+	}
+
+	init(argv[1]);
+	draw();
 
 	return EXIT_SUCCESS;
 }
