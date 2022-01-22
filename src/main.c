@@ -403,9 +403,7 @@ int main(int argc, char **argv) {
 		print_help(arguments, argument_count);
 		return 0;
 	}
-	printf("argument amount correct\n");
 	char *file_path = get_argument_values(argc, argv, arguments, argument_count);
-	printf("arguments gotten\n");
 	if (strcmp(file_path, "") == 0) {
 		fprintf(stderr, "Error: File not specified!\n");
 		print_help(arguments, argument_count);
