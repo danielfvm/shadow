@@ -35,9 +35,9 @@ typedef struct {
 
 int mode_conversion_amount = 3;
 EnumConvertInfo mode_conversion_table[] = {
-	{.name = "background", .enum_val = BACKGROUND},
-	{.name = "window", .enum_val = WINDOW},
-	{.name = "root", .enum_val = ROOT},
+	{ .name = "background", .enum_val = BACKGROUND },
+	{ .name = "window", .enum_val = WINDOW },
+	{ .name = "root", .enum_val = ROOT },
 };
 
 static Option options = {
@@ -398,17 +398,20 @@ int main(int argc, char **argv) {
 			.abbreviation = "-m", .value = "background", .name = "--mode",
 			.description = "Changes rendering mode. Modes: root, window, background"
 	}};
+
 	// Check for arguments
 	if (argc <= 1) {
 		print_help(arguments, argument_count);
 		return 0;
 	}
+
 	char *file_path = get_argument_values(argc, argv, arguments, argument_count);
-	if (strcmp(file_path, "") == 0) {
+	if (*file_path == '\0') {
 		fprintf(stderr, "Error: File not specified!\n");
 		print_help(arguments, argument_count);
 		return EXIT_FAILURE;
 	}
+
 	// Check if file exists
 	if (access(file_path, F_OK) == -1) {
 		fprintf(stderr, "ERROR: File at '%s' does not exist\n", file_path);

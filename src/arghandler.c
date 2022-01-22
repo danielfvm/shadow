@@ -10,7 +10,7 @@ char* get_argument_values(int argc, char **argv, ArgOption *options, int option_
 		option_index = 0;
 		option_found = 0;
 		while (option_index < option_count && !option_found) {
-			if(strcmp(argv[arg_index], options[option_index].name)  == 0||
+			if (strcmp(argv[arg_index], options[option_index].name)  == 0||
 			   strcmp(argv[arg_index], options[option_index].abbreviation) == 0) {
 				arg_index++;
 				if (arg_index < argc)
@@ -19,7 +19,7 @@ char* get_argument_values(int argc, char **argv, ArgOption *options, int option_
 			}
 			option_index++;
 		}
-		if(!option_found) {
+		if (!option_found) {
 			file_path = argv[arg_index];
 		}
 		arg_index++;
@@ -38,7 +38,7 @@ void print_help(ArgOption *options, int option_count) {
 
 int in_to_enum(char* input, EnumConvertInfo conversion_table[], int table_size) {
 	for (int i = 0; i < table_size; i++)
-		if(strcmp(input, conversion_table[i].name) == 0)
+		if (strcmp(input, conversion_table[i].name) == 0)
 			return conversion_table[i].enum_val;
 	return -1;
 }

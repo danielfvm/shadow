@@ -7,9 +7,10 @@ typedef struct {
 	char *description;
 	char *value;
 } ArgOption;
+
 typedef struct {
 	int enum_val;
-	char* name;
+	char *name;
 } EnumConvertInfo;
 
 char* get_argument_values(int argc, char **argv, ArgOption options[], int option_count);
