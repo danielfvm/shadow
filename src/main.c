@@ -13,12 +13,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
 
 #include "shader.h"
 #include "arghandler.h"
+
+static volatile sig_atomic_t keep_running = 1;
 
 typedef struct {
 	float quality;  // shader quality
@@ -156,7 +159,14 @@ void init(char *filepath) {
 	}
 }
 
-void draw() {
+
+
+/*
+ *  Draws pixmap on the root window
+ *  original: https://github.com/derf/feh/blob/master/src/wallpaper.c
+ */
+void set_pixmap_to_root(Pixmap pmap_d1, int width, int height) {
+
 	/* Used for setting pixmap to root window */
 	XGCValues gcvalues;
 	GC gc;
@@ -164,22 +174,86 @@ void draw() {
 	int format;
 	unsigned long length, after;
 	unsigned char *data_root = NULL, *data_esetroot = NULL;
-	Pixmap pmap_d1, pmap_d2;
 
 	/* local display to set closedownmode on */
 	Display *dpy2;
 	Window root2;
+
 	int depth2;
-	int depth;
 
+	Pixmap pmap_d2;
 
+	if (!(dpy2 = XOpenDisplay(NULL))) {
+		fprintf(stderr, "Can't reopen X display.");
+		exit(EXIT_FAILURE);
+	}
+
+	root2 = RootWindow(dpy2, DefaultScreen(dpy2));
+	depth2 = DefaultDepth(dpy2, DefaultScreen(dpy2));
+	XSync(dpy, False);
+	pmap_d2 = XCreatePixmap(dpy2, root2, width, height, depth2);
+	gcvalues.fill_style = FillTiled;
+	gcvalues.tile = pmap_d1;
+	gc = XCreateGC(dpy2, pmap_d2, GCFillStyle | GCTile, &gcvalues);
+	XFillRectangle(dpy2, pmap_d2, gc, 0, 0, width, height);
+	XFreeGC(dpy2, gc);
+	XSync(dpy2, False);
+	XSync(dpy, False);
+
+	prop_root = XInternAtom(dpy2, "_XROOTPMAP_ID", True);
+	prop_esetroot = XInternAtom(dpy2, "ESETROOT_PMAP_ID", True);
+
+	if (prop_root != None && prop_esetroot != None) {
+		XGetWindowProperty(dpy2, root2, prop_root, 0L, 1L,
+				False, AnyPropertyType, &type, &format, &length, &after, &data_root);
+		if (type == XA_PIXMAP) {
+			XGetWindowProperty(dpy2, root2,
+					prop_esetroot, 0L, 1L,
+					False, AnyPropertyType,
+					&type, &format, &length, &after, &data_esetroot);
+			if (data_root && data_esetroot) {
+				if (type == XA_PIXMAP && *((Pixmap *) data_root) == *((Pixmap *) data_esetroot)) {
+					XKillClient(dpy2, *((Pixmap *)
+								data_root));
+				}
+			}
+		}
+	}
+
+	if (data_root) {
+		XFree(data_root);
+	}
+
+	if (data_esetroot) {
+		XFree(data_esetroot);
+	}
+
+	/* This will locate the property, creating it if it doesn't exist */
+	prop_root = XInternAtom(dpy2, "_XROOTPMAP_ID", False);
+	prop_esetroot = XInternAtom(dpy2, "ESETROOT_PMAP_ID", False);
+
+	if (prop_root == None || prop_esetroot == None) {
+		fprintf(stderr, "creation of pixmap property failed.");
+	}
+
+	XChangeProperty(dpy2, root2, prop_root, XA_PIXMAP, 32, PropModeReplace, (unsigned char *) &pmap_d2, 1);
+	XChangeProperty(dpy2, root2, prop_esetroot, XA_PIXMAP, 32, PropModeReplace, (unsigned char *) &pmap_d2, 1);
+
+	XSetWindowBackgroundPixmap(dpy2, root2, pmap_d2);
+	XClearWindow(dpy2, root2);
+	XFlush(dpy2);
+	XSetCloseDownMode(dpy2, RetainPermanent);
+	XCloseDisplay(dpy2);
+}
+
+void draw() {
 	/* screen resolution */
 	Screen *screen = ScreenOfDisplay(dpy, 0);
 	int width = screen->width;
 	int height = screen->height;
 
-	depth = DefaultDepth(dpy, DefaultScreen(dpy));
-	pmap_d1 = XCreatePixmap(dpy, root, width, height, depth);
+	int depth = DefaultDepth(dpy, DefaultScreen(dpy));
+	Pixmap pmap = XCreatePixmap(dpy, root, width, height, depth);
 
 	/* locate uniforms */
 	shader_bind(shader);
@@ -199,7 +273,6 @@ void draw() {
 	glBindTexture(GL_TEXTURE_2D, texture);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -222,8 +295,7 @@ void draw() {
 	int win_x, win_y;
 	unsigned int mask_return;
 
-	// TODO: Exit condition
-	while (1) {
+	while (keep_running) {
 		// TODO: add framerate limiter here
 
 		if (options.mode == WINDOW) {
@@ -272,7 +344,7 @@ void draw() {
 
 		/* bind texture to render it on screen */
 		glEnable(GL_TEXTURE_2D);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind FBO to set the default framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);  // unbind FBO to set the default framebuffer
 		glBindTexture(GL_TEXTURE_2D, texture); // color attachment texture
 
 		/* clear screen */
@@ -304,85 +376,27 @@ void draw() {
 
 			Imlib_Image img = imlib_create_image_using_data(width, height, buffer);
 			imlib_context_set_image(img);
-			imlib_context_set_drawable(pmap_d1);
+			imlib_context_set_drawable(pmap);
 			imlib_image_flip_vertical();
 			imlib_render_image_on_drawable_at_size(0, 0, width, height);
 			imlib_free_image_and_decache();
 
-			/*
-			 *  create new display, copy pixmap to new display
-			 *  original: https://github.com/derf/feh/blob/master/src/wallpaper.c
-			 */
-			if (!(dpy2 = XOpenDisplay(NULL))) {
-				fprintf(stderr, "Can't reopen X display.");
-				exit(EXIT_FAILURE);
-			}
-
-			root2 = RootWindow(dpy2, DefaultScreen(dpy2));
-			depth2 = DefaultDepth(dpy2, DefaultScreen(dpy2));
-			XSync(dpy, False);
-			pmap_d2 = XCreatePixmap(dpy2, root2, width, height, depth2);
-			gcvalues.fill_style = FillTiled;
-			gcvalues.tile = pmap_d1;
-			gc = XCreateGC(dpy2, pmap_d2, GCFillStyle | GCTile, &gcvalues);
-			XFillRectangle(dpy2, pmap_d2, gc, 0, 0, width, height);
-			XFreeGC(dpy2, gc);
-			XSync(dpy2, False);
-			XSync(dpy, False);
-
-			prop_root = XInternAtom(dpy2, "_XROOTPMAP_ID", True);
-			prop_esetroot = XInternAtom(dpy2, "ESETROOT_PMAP_ID", True);
-
-			if (prop_root != None && prop_esetroot != None) {
-				XGetWindowProperty(dpy2, root2, prop_root, 0L, 1L,
-						False, AnyPropertyType, &type, &format, &length, &after, &data_root);
-				if (type == XA_PIXMAP) {
-					XGetWindowProperty(dpy2, root2,
-							prop_esetroot, 0L, 1L,
-							False, AnyPropertyType,
-							&type, &format, &length, &after, &data_esetroot);
-					if (data_root && data_esetroot) {
-						if (type == XA_PIXMAP && *((Pixmap *) data_root) == *((Pixmap *) data_esetroot)) {
-							XKillClient(dpy2, *((Pixmap *)
-										data_root));
-						}
-					}
-				}
-			}
-
-			if (data_root) {
-				XFree(data_root);
-			}
-
-			if (data_esetroot) {
-				XFree(data_esetroot);
-			}
-
-			/* This will locate the property, creating it if it doesn't exist */
-			prop_root = XInternAtom(dpy2, "_XROOTPMAP_ID", False);
-			prop_esetroot = XInternAtom(dpy2, "ESETROOT_PMAP_ID", False);
-
-			if (prop_root == None || prop_esetroot == None) {
-				fprintf(stderr, "creation of pixmap property failed.");
-			}
-
-			XChangeProperty(dpy2, root2, prop_root, XA_PIXMAP, 32, PropModeReplace, (unsigned char *) &pmap_d2, 1);
-			XChangeProperty(dpy2, root2, prop_esetroot, XA_PIXMAP, 32, PropModeReplace, (unsigned char *) &pmap_d2, 1);
-
-			XSetWindowBackgroundPixmap(dpy2, root2, pmap_d2);
-			XClearWindow(dpy2, root2);
-			XFlush(dpy2);
-			XSetCloseDownMode(dpy2, RetainPermanent);
-			XCloseDisplay(dpy2);
-		} else { // on mode window, swap buffer to x11 window
-			glXSwapBuffers(dpy, win);
+			set_pixmap_to_root(pmap, width, height);
+		} else { 
+			glXSwapBuffers(dpy, win); // on mode window, swap buffer to x11 window
 		}
 	}
 
 	free(buffer);
 }
 
+static void sig_handler(int sig) {
+    keep_running = 0;
+}
+
 int main(int argc, char **argv) {
+	signal(SIGINT, sig_handler);
+
 	int argument_count = 4;
 	ArgOption arguments[] = {
 		(ArgOption){
