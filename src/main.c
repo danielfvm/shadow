@@ -18,6 +18,7 @@
 #include <math.h>
 
 #include "shader.h"
+#include "arghandler.h"
 
 typedef struct {
 	float quality;  // shader quality
@@ -32,20 +33,18 @@ typedef struct {
 
 } Option;
 
+int mode_conversion_amount = 3;
+EnumConvertInfo mode_conversion_table[] = {
+	{ .name = "background", .enum_val = BACKGROUND },
+	{ .name = "window", .enum_val = WINDOW },
+	{ .name = "root", .enum_val = ROOT },
+};
+
 static Option options = {
 	.quality = 1,
 	.speed = 1,
 	.opacity = 1,
 	.mode = BACKGROUND,
-};
-
-static char help[] = {
-	"Usage: %s <path> [options]\n"
-	"Options:\n"
-	"  -q, --quality\t\tChanges quality level of the shader, default 1.\n"
-	"  -s, --speed  \t\tChanges animation speed, default 1.\n"
-	"  -m, --mode   \t\tChanges rendering mode. Modes: root, window, background\n"
-	"  -o, --opacity\t\tSets background window transparency if in window/background mode\n"
 };
 
 static Shader shader;
@@ -157,17 +156,12 @@ void init(char *filepath) {
 	}
 }
 
-/* 3 color values to 1 hex color value */
-unsigned int createRGB(int r, int g, int b) {
-	return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
-}
-
 void draw() {
 	/* Used for setting pixmap to root window */
 	XGCValues gcvalues;
 	GC gc;
 	Atom prop_root, prop_esetroot, type;
-	int format, i;
+	int format;
 	unsigned long length, after;
 	unsigned char *data_root = NULL, *data_esetroot = NULL;
 	Pixmap pmap_d1, pmap_d2;
@@ -302,7 +296,8 @@ void draw() {
 		glEnd();
 		glPopMatrix();
 
-		if (options.mode == ROOT) { // on root mode, get pixels from gl context and convert it to an Pixbuf
+		// in root mode, get pixels from gl context and convert it to an Pixbuf and draw it on root window
+		if (options.mode == ROOT) { 
 
 			/* create Imlib_Image from current Frame */
 			glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage here :/
@@ -388,43 +383,53 @@ void draw() {
 }
 
 int main(int argc, char **argv) {
+	int argument_count = 4;
+	ArgOption arguments[] = {
+		(ArgOption){
+			.abbreviation = "-q", .value = "1", .name = "--quality",
+			.description = "Changes quality level of the shader, default: 1."
+		}, (ArgOption){
+			.abbreviation = "-s", .value = "1", .name = "--speed",
+			.description = "Changes animation speed, default 1."
+		}, (ArgOption){
+			.abbreviation = "-o", .value = "1", .name = "--opacity",
+			.description = "Sets background window transparency if in window/background mode"
+		}, (ArgOption){
+			.abbreviation = "-m", .value = "background", .name = "--mode",
+			.description = "Changes rendering mode. Modes: root, window, background"
+	}};
 
 	// Check for arguments
 	if (argc <= 1) {
-        printf(help, argv[0]);
+		print_help(arguments, argument_count);
 		return 0;
 	}
 
-	// Handle arguments
-	for (int i = 2; i < argc - 1; ++ i) {
-		if (argv[i][1] == 'q' || strcmp(argv[i], "--quality") == 0) {
-			options.quality = fmin(fmax(atof(argv[i+1]), 0.01), 1);
-		} else if (argv[i][1] == 's' || strcmp(argv[i], "--speed") == 0) {
-			options.speed = atof(argv[i+1]);
-		} else if (argv[i][1] == 'o' || strcmp(argv[i], "--opacity") == 0) {
-			options.opacity = atof(argv[i+1]);
-		} else if (argv[i][1] == 'm' || strcmp(argv[i], "--mode") == 0) {
-			if (strcmp(argv[i+1], "root") == 0) {
-				options.mode = ROOT;
-			} else if (strcmp(argv[i+1], "window") == 0) {
-				options.mode = WINDOW;
-			} else if (strcmp(argv[i+1], "background") == 0) {
-				options.mode = BACKGROUND;
-			} else {
-				printf("Mode '%s' does not exist\n\n", argv[i+1]);
-				printf(help, argv[0]);
-				return EXIT_FAILURE;
-			}
-		}
-	}
-
-	// Check if file exists
-	if (access(argv[1], F_OK) == -1) {
-		fprintf(stderr, "ERROR: File at '%s' does not exist\n", argv[1]);
+	char *file_path = get_argument_values(argc, argv, arguments, argument_count);
+	if (*file_path == '\0') {
+		fprintf(stderr, "Error: File not specified!\n");
+		print_help(arguments, argument_count);
 		return EXIT_FAILURE;
 	}
 
-	init(argv[1]);
+	// Check if file exists
+	if (access(file_path, F_OK) == -1) {
+		fprintf(stderr, "ERROR: File at '%s' does not exist\n", file_path);
+		return EXIT_FAILURE;
+	}
+	
+	options.quality = fmin(fmax(atof(arguments[0].value), 0.01), 1);
+	options.speed = atof(arguments[1].value);
+	options.opacity = atof(arguments[2].value);
+	options.mode = in_to_enum(arguments[3].value, mode_conversion_table, 3);
+	
+	if (options.mode == -1) {
+		fprintf(stderr, "ERROR: Mode \"%s\" does not exist\n", arguments[3].value);
+		print_help(arguments, argument_count);
+		return EXIT_FAILURE;
+	}
+
+	init(file_path);
 	draw();
 
 	return EXIT_SUCCESS;
