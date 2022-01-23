@@ -511,13 +511,13 @@ int main(int argc, char **argv) {
 		
 		// TODO: add framerate limiter here
 
-		for (i = 0; i < renderer_count; ++i) {
+		for (i = 0; i < renderer_count; i++) {
 			render(&renderers[i], time * options.speed);
 		}
 	}
 
 	/* Free resources */
-	for (i = 0; i < renderer_count; ++ i) {
+	for (i = 0; i < renderer_count; i++) {
 		if (options.mode == ROOT) {
 			free(renderers[i].buffer);
 		} else {
