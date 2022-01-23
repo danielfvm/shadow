@@ -9,6 +9,7 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/extensions/Xrandr.h>
 
 #include <unistd.h>
 #include <string.h>
@@ -21,9 +22,30 @@
 #include "shader.h"
 #include "arghandler.h"
 
-static volatile sig_atomic_t keep_running = 1;
-
 typedef struct {
+	Shader shader;
+	Window window;
+
+	int width, height;
+
+	/* uniforms */
+	int locResolution;
+	int locMouse;
+	int locTime;
+
+	/* create a new framebuffer */
+	unsigned int fbo;
+	unsigned int texture;
+
+	/* used for converting framebuffer to Imlib_Image in root mode */
+	unsigned int* buffer;
+	Pixmap pmap;
+
+	// TODO: 3d Models can be stored here
+	
+} Renderer; // other name?
+
+static struct {
 	float quality;  // shader quality
 	float speed;    // shader animation speed
 	float opacity;  // background transparency
@@ -34,41 +56,26 @@ typedef struct {
 		ROOT,
 	} mode;
 
-} Option;
+} options;
 
-int mode_conversion_amount = 3;
-EnumConvertInfo mode_conversion_table[] = {
+static int mode_conversion_amount = 3;
+static EnumConvertInfo mode_conversion_table[] = {
 	{ .name = "background", .enum_val = BACKGROUND },
 	{ .name = "window", .enum_val = WINDOW },
 	{ .name = "root", .enum_val = ROOT },
 };
 
-static Option options = {
-	.quality = 1,
-	.speed = 1,
-	.opacity = 1,
-	.mode = BACKGROUND,
-};
+static volatile sig_atomic_t keep_running = 1;
 
-static Shader shader;
+static Renderer *renderers;
+static Display *dpy;
+static XVisualInfo *vi;
+static Window root;
+static GLXContext glc;
 
+void init() {
 
-Display *dpy;
-XVisualInfo *vi;
-
-Window root;
-
-/* Window used in background & window mode */
-Window win;
-XWindowAttributes gwa;
-
-
-void init(char *filepath) {
-	GLXContext glc;
 	int screen;
-
-	Colormap cmap;
-	XSetWindowAttributes swa;
 
 	/* open display, screen & root */
 	if (!(dpy = XOpenDisplay(NULL))) {
@@ -77,7 +84,7 @@ void init(char *filepath) {
 	}
 
 	screen = DefaultScreen(dpy);
-	root = RootWindow(dpy, screen);
+ 	root = RootWindow(dpy, screen);
 
 	/* setup imlib */
 	imlib_context_set_display(dpy);
@@ -92,73 +99,105 @@ void init(char *filepath) {
 		exit(EXIT_FAILURE);
 	}
 
-	/* screen resolution */
-	Screen *s = ScreenOfDisplay(dpy, 0);
-	int width = s->width;
-	int height = s->height;
-
-	/* create a new window if mode: window, background */
-	if (options.mode == WINDOW || options.mode == BACKGROUND) {
-		cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
-		swa.colormap = cmap;
-		swa.event_mask = ExposureMask;
-
-		if (options.mode == BACKGROUND) {
-			win = XCreateWindow(dpy, root, 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
-			Atom window_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
-			long value = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
-			XChangeProperty(dpy, win, window_type, XA_ATOM, 32, PropModeReplace, (unsigned char *) &value, 1);
-		} else {
-			win = XCreateWindow(dpy, root, 0, 0, 600, 600, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
-		}
-
-		// make window transparent
-		if (options.opacity < 1) {
-			uint32_t cardinal_alpha = (uint32_t) (options.opacity * (uint32_t)-1);
-			XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", 0), XA_CARDINAL, 32, PropModeReplace, (uint8_t*) &cardinal_alpha,1) ;
-		}
-
-		XMapWindow(dpy, win);
-		XStoreName(dpy, win, "Show");
-	}
-
 	/* create new context for offscreen rendering */
 	if (!(glc = glXCreateContext(dpy, vi, NULL, GL_TRUE))) {
 		fprintf(stderr, "Failed to create context\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (options.mode == ROOT) {
-		glXMakeCurrent(dpy, root, glc);
-	} else {
-		glXMakeCurrent(dpy, win, glc);
+	glXMakeCurrent(dpy, root, glc);
+
+	/* init Glew */
+	if (glewInit() != GLEW_OK || !GLEW_VERSION_2_1) {
+		fprintf(stderr, "Failed to init GLEW\n");
+		exit(EXIT_FAILURE);
 	}
 
-	/* setup opengl */
+	/* init opengl */
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, 1, 1, 0, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
-
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+}
 
-	/* init Glew */
-	GLenum err = glewInit();
-	if (err != GLEW_OK || !GLEW_VERSION_2_1) {
-		fprintf(stderr, "Failed to init GLEW\n");
-		exit(EXIT_FAILURE);
+void init_renderer(Renderer* r, int x, int y, int width, int height, char *shader_path) {
+	XSetWindowAttributes swa;
+	Colormap cmap;
+
+	/* create a new window for mode window and background */
+	if (options.mode == WINDOW || options.mode == BACKGROUND) {
+		cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
+		swa.colormap = cmap;
+		swa.event_mask = ExposureMask;
+
+		if (options.mode == BACKGROUND) {
+			r->window = XCreateWindow(dpy, root, x, y, width, height, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
+			Atom window_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+			long value = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
+			XChangeProperty(dpy, r->window, window_type, XA_ATOM, 32, PropModeReplace, (unsigned char *) &value, 1);
+		} else {
+			r->window = XCreateWindow(dpy, root, 0, 0, 600, 600, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
+		}
+
+		// make window transparent
+		if (options.opacity < 1) {
+			uint32_t cardinal_alpha = (uint32_t) (options.opacity * (uint32_t)-1);
+			XChangeProperty(dpy, r->window, XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", 0), XA_CARDINAL, 32, PropModeReplace, (uint8_t*) &cardinal_alpha,1) ;
+		}
+
+		XMapWindow(dpy, r->window);
+		XStoreName(dpy, r->window, "Show");
+	} else {
+		r->window = root;
 	}
 
 	/* initialize shader program from user path */
-	if (!(shader = shader_compile(filepath))) {
+	if (!(r->shader = shader_compile(shader_path))) {
 		fprintf(stderr, "Failed to compile Shader\n");
 		exit(EXIT_FAILURE);
 	}
-}
 
+	/* used for converting framebuffer to Imlib_Image */
+	if (options.mode == ROOT) {
+		int depth = DefaultDepth(dpy, DefaultScreen(dpy));
+		r->pmap = XCreatePixmap(dpy, root, width, height, depth);
+		r->buffer = (unsigned int*) malloc(width * height * 4);
+	} else {
+		r->buffer = NULL;
+	}
+
+	/* locate uniforms */
+	shader_bind(r->shader);
+	r->locResolution = shader_get_location(r->shader, "resolution");
+	r->locMouse = shader_get_location(r->shader, "mouse");
+	r->locTime = shader_get_location(r->shader, "time");
+	shader_unbind();
+
+	/* create a new framebuffer */
+	glGenFramebuffers(1, &r->fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, r->fbo);
+
+	/* create a new texture */
+	glGenTextures(1, &r->texture);
+	glBindTexture(GL_TEXTURE_2D, r->texture);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	/* apply texture to framebuffer */
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, r->texture, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	/* width and height might change in window mode */
+	r->height = height;
+	r->width = width;
+}
 
 
 /*
@@ -246,148 +285,106 @@ void set_pixmap_to_root(Pixmap pmap_d1, int width, int height) {
 	XCloseDisplay(dpy2);
 }
 
-void draw() {
-	/* screen resolution */
-	Screen *screen = ScreenOfDisplay(dpy, 0);
-	int width = screen->width;
-	int height = screen->height;
+void render(Renderer* r, float time) {
 
-	int depth = DefaultDepth(dpy, DefaultScreen(dpy));
-	Pixmap pmap = XCreatePixmap(dpy, root, width, height, depth);
-
-	/* locate uniforms */
-	shader_bind(shader);
-	int locResolution = shader_get_location(shader, "resolution");
-	int locMouse = shader_get_location(shader, "mouse");
-	int locTime = shader_get_location(shader, "time");
-	shader_unbind();
-
-	/* create a new framebuffer */
-	unsigned int fbo;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-	/* create a new texture */
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-
-	/* apply texture to framebuffer */
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	/* setup timer */
-	struct timespec start, end;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-
-	/* used for converting framebuffer to Imlib_Image */
-	unsigned int* buffer = (unsigned int*) malloc(width * height * 4);
-
-	Window window_returned;
+	unsigned int mask_return;
 	int root_x, root_y;
 	int win_x, win_y;
-	unsigned int mask_return;
 
-	while (keep_running) {
-		// TODO: add framerate limiter here
+	Window window_returned;
 
-		if (options.mode == WINDOW) {
-			XGetWindowAttributes(dpy, win, &gwa);
-			width = gwa.width;
-			height = gwa.height;
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		}
+	XWindowAttributes gwa;
+	Imlib_Image img;
 
-		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-		uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+	/* set renderer's window as context */
+	glXMakeCurrent(dpy, r->window, glc);
 
-		/* change viewport, and scale it down depending on quality level */
-		glViewport(0, 0, width * options.quality, height * options.quality);
+	/* get new size in case the window was resized */
+	if (options.mode == WINDOW) {
+		XGetWindowAttributes(dpy, r->window, &gwa);
 
-		/* clear Framebuffer */
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		/* capture mouse position */
-		XQueryPointer(dpy, root, &window_returned,
-				&window_returned, &root_x, &root_y, &win_x, &win_y,
-				&mask_return);
-
-		/* bind shader background */
-		shader_bind(shader);
-		shader_set_float(locTime, (float)delta_us * 0.000001f * options.speed);
-		shader_set_vec2(locResolution, width * options.quality, height * options.quality);
-		shader_set_vec2(locMouse, (float)(root_x) / width, 1.0 - (float)(root_y) / height);
-
-		/* render shader on framebuffer */
-		glPushMatrix();
-		glColor3f(1.0, 1.0, 1.0);
-		glBegin(GL_QUADS);
-		glVertex2f(0.0, 0.0);
-		glVertex2f(1.0, 0.0);
-		glVertex2f(1.0, 1.0);
-		glVertex2f(0.0, 1.0);
-		glEnd();
-		glPopMatrix();
-		shader_unbind();
-
-		/* change viewport to default */
-		glViewport(0, 0, width, height);
-
-		/* bind texture to render it on screen */
-		glEnable(GL_TEXTURE_2D);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);  // unbind FBO to set the default framebuffer
-		glBindTexture(GL_TEXTURE_2D, texture); // color attachment texture
-
-		/* clear screen */
-		glClearColor(0.0, 0.0, 0.0, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		/* render texture on screen */
-		glPushMatrix();
-		glScalef(1.0 / options.quality, 1.0 / options.quality, 1.0);
-		glTranslatef(0.0, options.quality - 1.0, 0.0);
-		glColor3f(1.0, 1.0, 1.0);
-		glBegin(GL_QUADS);
-		glTexCoord2f(0, 1);
-		glVertex2f(0, 0);
-		glTexCoord2f(1, 1);
-		glVertex2f(1, 0);
-		glTexCoord2f(1, 0);
-		glVertex2f(1, 1);
-		glTexCoord2f(0, 0);
-		glVertex2f(0, 1);
-		glEnd();
-		glPopMatrix();
-
-		// in root mode, get pixels from gl context and convert it to an Pixbuf and draw it on root window
-		if (options.mode == ROOT) { 
-
-			/* create Imlib_Image from current Frame */
-			glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, buffer); // a lot of cpu usage here :/
-
-			Imlib_Image img = imlib_create_image_using_data(width, height, buffer);
-			imlib_context_set_image(img);
-			imlib_context_set_drawable(pmap);
-			imlib_image_flip_vertical();
-			imlib_render_image_on_drawable_at_size(0, 0, width, height);
-			imlib_free_image_and_decache();
-
-			set_pixmap_to_root(pmap, width, height);
-		} else { 
-			glXSwapBuffers(dpy, win); // on mode window, swap buffer to x11 window
-		}
+		r->width = gwa.width;
+		r->height = gwa.height;
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, r->width, r->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
 
-	free(buffer);
+	/* change viewport, and scale it down depending on quality level */
+	glViewport(0, 0, r->width * options.quality, r->height * options.quality);
+
+	/* clear Framebuffer */
+	glBindFramebuffer(GL_FRAMEBUFFER, r->fbo);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	/* capture mouse position */
+	XQueryPointer(dpy, root, &window_returned,
+			&window_returned, &root_x, &root_y, &win_x, &win_y,
+			&mask_return);
+
+	/* bind shader background */
+	shader_bind(r->shader);
+	shader_set_float(r->locTime, time);
+	shader_set_vec2(r->locResolution, r->width * options.quality, r->height * options.quality);
+	shader_set_vec2(r->locMouse, (float)root_x / r->width, 1.0 - (float)root_y / r->height);
+
+	/* render shader on framebuffer */
+	glPushMatrix();
+	glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_QUADS);
+	glVertex2f(0.0, 0.0);
+	glVertex2f(1.0, 0.0);
+	glVertex2f(1.0, 1.0);
+	glVertex2f(0.0, 1.0);
+	glEnd();
+	glPopMatrix();
+	shader_unbind();
+
+	/* change viewport to default */
+	glViewport(0, 0, r->width, r->height);
+
+	/* bind texture to render it on screen */
+	glEnable(GL_TEXTURE_2D);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // unbind FBO to set the default framebuffer
+	glBindTexture(GL_TEXTURE_2D, r->texture); // color attachment texture
+
+	/* clear screen */
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	/* render texture on screen */
+	glPushMatrix();
+	glScalef(1.0 / options.quality, 1.0 / options.quality, 1.0);
+	glTranslatef(0.0, options.quality - 1.0, 0.0);
+	glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0, 1);
+	glVertex2f(0, 0);
+	glTexCoord2f(1, 1);
+	glVertex2f(1, 0);
+	glTexCoord2f(1, 0);
+	glVertex2f(1, 1);
+	glTexCoord2f(0, 0);
+	glVertex2f(0, 1);
+	glEnd();
+	glPopMatrix();
+
+	// in root mode, get pixels from gl context and convert it to an Pixbuf and draw it on root window
+	if (options.mode == ROOT) { 
+
+		/* create Imlib_Image from current Frame */
+		glReadPixels(0, 0, r->width, r->height, GL_BGRA, GL_UNSIGNED_BYTE, r->buffer); // a lot of cpu usage here :/
+
+		img = imlib_create_image_using_data(r->width, r->height, r->buffer);
+		imlib_context_set_image(img);
+		imlib_context_set_drawable(r->pmap);
+		imlib_image_flip_vertical();
+		imlib_render_image_on_drawable_at_size(0, 0, r->width, r->height);
+		imlib_free_image_and_decache();
+
+		set_pixmap_to_root(r->pmap, r->width, r->height);
+	} else {
+		glXSwapBuffers(dpy, r->window);
+	}
 }
 
 static void sig_handler(int sig) {
@@ -397,20 +394,23 @@ static void sig_handler(int sig) {
 int main(int argc, char **argv) {
 	signal(SIGINT, sig_handler);
 
-	int argument_count = 4;
+	int argument_count = 5;
 	ArgOption arguments[] = {
-		(ArgOption){
+		(ArgOption) {
 			.abbreviation = "-q", .value = "1", .name = "--quality",
 			.description = "Changes quality level of the shader, default: 1."
-		}, (ArgOption){
+		}, (ArgOption) {
 			.abbreviation = "-s", .value = "1", .name = "--speed",
 			.description = "Changes animation speed, default 1."
-		}, (ArgOption){
+		}, (ArgOption) {
 			.abbreviation = "-o", .value = "1", .name = "--opacity",
 			.description = "Sets background window transparency if in window/background mode"
-		}, (ArgOption){
+		}, (ArgOption) {
 			.abbreviation = "-m", .value = "background", .name = "--mode",
 			.description = "Changes rendering mode. Modes: root, window, background"
+		}, (ArgOption) {
+			.abbreviation = "-d", .value = "full", .name = "--display", // full: render shader on all screens, TODO: other name for 'full', specify shader for monitor
+			.description = ""
 	}};
 
 	// Check for arguments
@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
 	options.quality = fmin(fmax(atof(arguments[0].value), 0.01), 1);
 	options.speed = atof(arguments[1].value);
 	options.opacity = atof(arguments[2].value);
-	options.mode = in_to_enum(arguments[3].value, mode_conversion_table, 3);
+	options.mode = in_to_enum(arguments[3].value, mode_conversion_table, mode_conversion_amount);
 	
 	if (options.mode == -1) {
 		fprintf(stderr, "ERROR: Mode \"%s\" does not exist\n", arguments[3].value);
@@ -443,8 +443,89 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	init(file_path);
-	draw();
+	init();
+
+	/* Monitors */
+	Screen *screen = ScreenOfDisplay(dpy, 0);
+	int width = screen->width;
+	int height = screen->height;
+	int x = 0;
+	int y = 0;
+
+	if (strcmp(arguments[4].value, "full") != 0) {
+		int monitor_count;
+		XRRMonitorInfo *monitors = XRRGetMonitors(dpy, root, 1, &monitor_count);
+
+		if (monitors == NULL) {
+			fprintf(stderr, "ERROR: Failed to get monitors.");
+			return EXIT_FAILURE;
+		}
+
+		_Bool monitor_found = 0;
+		int m;
+
+		for (m = 0; m < monitor_count; m++) {
+			if (strcmp(XGetAtomName(dpy, monitors[m].name), arguments[4].value) == 0) {
+				monitor_found = 1;
+				x = monitors[m].x;
+				y = monitors[m].y;
+				width = monitors[m].width;
+				height = monitors[m].height;
+				break;
+			}
+		}
+		
+		if (!monitor_found) {
+			fprintf(stderr, "ERROR: Monitor \"%s\" does not exist\nValid monitors:\n", arguments[4].value);
+			for (m = 0; m < monitor_count; m++) {
+				fprintf(stderr, " %d: %s%s%s %dx%d+%d+%d\n",
+					m,
+					monitors[m].automatic ? "+" : "",
+					monitors[m].primary ? "*" : "",
+					XGetAtomName(dpy, monitors[m].name),
+					monitors[m].width,
+					monitors[m].height,
+					monitors[m].x,
+					monitors[m].y);
+			}
+			return EXIT_FAILURE;
+		}
+	}
+
+	// TODO: create multiple rendereres with specific shaders depending on argument: https://github.com/danielfvm/Show/issues/7
+	int renderer_count = 1;
+	renderers = (Renderer*) malloc(sizeof(Renderer) * renderer_count);
+	init_renderer(renderers, x, y, width, height, file_path);
+
+	/* setup timer */
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+
+	int i;
+	float time;
+
+	/* Main loop */
+	while (keep_running) {
+		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+		time = ((end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000.0f) * 0.000001f;
+		
+		// TODO: add framerate limiter here
+
+		for (i = 0; i < renderer_count; ++i) {
+			render(&renderers[i], time * options.speed);
+		}
+	}
+
+	/* Free resources */
+	for (i = 0; i < renderer_count; ++ i) {
+		if (options.mode == ROOT) {
+			free(renderers[i].buffer);
+		} else {
+			XDestroyWindow(dpy, renderers[i].window);
+		}
+	}
+
+	free(renderers);
 
 	return EXIT_SUCCESS;
 }
