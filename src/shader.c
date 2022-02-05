@@ -52,14 +52,14 @@ int shader_check_compile_errors(Shader shader, const char *type) {
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 		if (!success) {
 			glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-			fprintf(stderr, "ERROR::SHADER_COMPILATION_ERROR of type: %s\n%s\n", type, infoLog);
+			fprintf(stdout, "ERROR::SHADER_COMPILATION_ERROR of type: %s\n%s\n", type, infoLog);
 			return 0;
 		}
 	} else {
 		glGetProgramiv(shader, GL_LINK_STATUS, &success);
 		if (!success) {
 			glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-			fprintf(stderr, "ERROR::PROGRAM_LINKING_ERROR of type: %s\n%s\n", type, infoLog);
+			fprintf(stdout, "ERROR::PROGRAM_LINKING_ERROR of type: %s\n%s\n", type, infoLog);
 			return 0;
 		}
 	}
