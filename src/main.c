@@ -41,6 +41,8 @@ typedef struct {
 	unsigned int* buffer;
 	Pixmap pmap;
 
+	char* shader_path;
+
 	// TODO: 3d Models can be stored here
 	
 } Renderer; // other name?
@@ -72,6 +74,8 @@ static Display *dpy;
 static XVisualInfo *vi;
 static Window root;
 static GLXContext glc;
+
+static struct timespec start, end, shader_refresh;
 
 void init() {
 
@@ -154,8 +158,10 @@ void init_renderer(Renderer* r, int x, int y, int width, int height, char *shade
 		r->window = root;
 	}
 
+	r->shader_path = shader_path;
+
 	/* initialize shader program from user path */
-	if (!(r->shader = shader_compile(shader_path))) {
+	if (!(r->shader = shader_compile(r->shader_path))) {
 		fprintf(stderr, "Failed to compile Shader\n");
 		exit(EXIT_FAILURE);
 	}
@@ -306,6 +312,15 @@ void render(Renderer* r, float time) {
 		r->width = gwa.width;
 		r->height = gwa.height;
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, r->width, r->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+		/* refresh shader program every second for easier development */
+		if (end.tv_sec > shader_refresh.tv_sec) {
+			clock_gettime(CLOCK_MONOTONIC_RAW, &shader_refresh);
+			int new_shader = shader_compile(r->shader_path);
+			if (new_shader) {
+				r->shader = new_shader;
+			}
+		}
 	}
 
 	/* change viewport, and scale it down depending on quality level */
@@ -498,8 +513,8 @@ int main(int argc, char **argv) {
 	init_renderer(renderers, x, y, width, height, file_path);
 
 	/* setup timer */
-	struct timespec start, end;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	clock_gettime(CLOCK_MONOTONIC_RAW, &shader_refresh);
 
 	int i;
 	float time;
@@ -511,13 +526,13 @@ int main(int argc, char **argv) {
 		
 		// TODO: add framerate limiter here
 
-		for (i = 0; i < renderer_count; ++i) {
+		for (i = 0; i < renderer_count; i++) {
 			render(&renderers[i], time * options.speed);
 		}
 	}
 
 	/* Free resources */
-	for (i = 0; i < renderer_count; ++ i) {
+	for (i = 0; i < renderer_count; i++) {
 		if (options.mode == ROOT) {
 			free(renderers[i].buffer);
 		} else {
