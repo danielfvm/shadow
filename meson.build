@@ -1,7 +1,7 @@
 project('Show','C')
 cc = meson.get_compiler('c')
 
-sources = [ './src/main.c', './src/shader.c', './src/arghandler.c' ]
+sources = [ './src/main.c', './src/shader.c', './src/arghandler.c', './src/opengl.c' ]
 
 deps  = [ dependency('imlib2') ]
 deps += [ dependency('GLEW'),dependency('GL') ]

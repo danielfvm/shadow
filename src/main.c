@@ -21,9 +21,14 @@
 
 #include "shader.h"
 #include "arghandler.h"
+#include "opengl.h"
+
+typedef uint8_t bool;
 
 typedef struct {
+	Texture image;
 	Shader shader;
+	Shader shader_texture;
 	Window window;
 
 	int width, height;
@@ -77,7 +82,7 @@ void init() {
 
 	int screen;
 
-	/* open display, screen & root */
+	// open display, screen & root
 	if (!(dpy = XOpenDisplay(NULL))) {
 		fprintf(stderr, "Error while opening display.\n");
 		exit(EXIT_FAILURE);
@@ -86,12 +91,12 @@ void init() {
 	screen = DefaultScreen(dpy);
  	root = RootWindow(dpy, screen);
 
-	/* setup imlib */
+	// setup imlib
 	imlib_context_set_display(dpy);
 	imlib_context_set_visual(DefaultVisual(dpy, screen));
 	imlib_context_set_colormap(DefaultColormap(dpy, screen));
 
-	/* get visual matching attr */
+	// get visual matching attr
 	GLint attr[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
 
 	if (!(vi = glXChooseVisual(dpy, 0, attr))) {
@@ -99,7 +104,7 @@ void init() {
 		exit(EXIT_FAILURE);
 	}
 
-	/* create new context for offscreen rendering */
+	// create new context for offscreen rendering
 	if (!(glc = glXCreateContext(dpy, vi, NULL, GL_TRUE))) {
 		fprintf(stderr, "Failed to create context\n");
 		exit(EXIT_FAILURE);
@@ -107,13 +112,13 @@ void init() {
 
 	glXMakeCurrent(dpy, root, glc);
 
-	/* init Glew */
+	// init Glew
 	if (glewInit() != GLEW_OK || !GLEW_VERSION_2_1) {
 		fprintf(stderr, "Failed to init GLEW\n");
 		exit(EXIT_FAILURE);
 	}
 
-	/* init opengl */
+	// init opengl
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, 1, 1, 0, -1, 1);
@@ -123,11 +128,23 @@ void init() {
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 }
 
-void init_renderer(Renderer* r, int x, int y, int width, int height, char *shader_path) {
+const char* get_filename_ext(const char* filename) {
+    const char* dot = strrchr(filename, '.');
+    return (!dot || dot == filename) ? "" : dot + 1;
+}
+
+bool is_file_image(const char* filename) {
+	const char* ext = get_filename_ext(filename);
+	return strcasecmp(ext, "jpeg") == 0 || 
+		   strcasecmp(ext, "jpg") == 0 || 
+		   strcasecmp(ext, "png") == 0;
+}
+
+void init_renderer(Renderer* r, int x, int y, int width, int height, char* shader_path, char* image_path) {
 	XSetWindowAttributes swa;
 	Colormap cmap;
 
-	/* create a new window for mode window and background */
+	// create a new window for mode window and background
 	if (options.mode == WINDOW || options.mode == BACKGROUND) {
 		cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 		swa.colormap = cmap;
@@ -138,6 +155,7 @@ void init_renderer(Renderer* r, int x, int y, int width, int height, char *shade
 			Atom window_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 			long value = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
 			XChangeProperty(dpy, r->window, window_type, XA_ATOM, 32, PropModeReplace, (unsigned char *) &value, 1);
+			printf("%ld\n", r->window);
 		} else {
 			r->window = XCreateWindow(dpy, root, 0, 0, 600, 600, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
 		}
@@ -154,13 +172,43 @@ void init_renderer(Renderer* r, int x, int y, int width, int height, char *shade
 		r->window = root;
 	}
 
-	/* initialize shader program from user path */
-	if (!(r->shader = shader_compile(shader_path))) {
-		fprintf(stderr, "Failed to compile Shader\n");
-		exit(EXIT_FAILURE);
+	if (image_path != NULL) {
+		char* vShaderCode = "#version 330 core\n layout (location = 0) in vec3 aPos;\n layout (location = 2) in vec2 aTexCoord;\n out vec2 TexCoord;\n void main() {\n gl_Position = vec4(aPos, 1.0);\n TexCoord = aTexCoord;\n }";
+		char* fShaderCode = "#version 330 core\n out vec4 FragColor;\n in vec2 TexCoord;\n uniform sampler2D tex;\n void main(){\n FragColor = texture(tex, TexCoord);\n}";
+
+		if (load_texture(shader_path, &r->image) == 0) {
+			fprintf(stderr, "Failed to compile Shader\n");
+			exit(EXIT_FAILURE);
+		}
+
+		if (!(r->shader_texture = shader_compile(vShaderCode, fShaderCode))) {
+			fprintf(stderr, "Failed to compile Shader\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	if (shader_path != NULL) {
+
+		char* vShaderCode = "void main(void){\ngl_Position=ftransform();\n}";
+		char* fShaderCode = readFile(shader_path);
+
+		// initialize shader program from user path
+		if (!(r->shader = shader_compile(vShaderCode, fShaderCode))) {
+			fprintf(stderr, "Failed to compile Shader\n");
+			exit(EXIT_FAILURE);
+		}
+
+		// locate uniforms
+		shader_bind(r->shader);
+		r->locResolution = shader_get_location(r->shader, "resolution");
+		r->locMouse = shader_get_location(r->shader, "mouse");
+		r->locTime = shader_get_location(r->shader, "time");
+		shader_unbind();
+
 	}
 
-	/* used for converting framebuffer to Imlib_Image */
+
+	// used for converting framebuffer to Imlib_Image
 	if (options.mode == ROOT) {
 		int depth = DefaultDepth(dpy, DefaultScreen(dpy));
 		r->pmap = XCreatePixmap(dpy, root, width, height, depth);
@@ -169,18 +217,11 @@ void init_renderer(Renderer* r, int x, int y, int width, int height, char *shade
 		r->buffer = NULL;
 	}
 
-	/* locate uniforms */
-	shader_bind(r->shader);
-	r->locResolution = shader_get_location(r->shader, "resolution");
-	r->locMouse = shader_get_location(r->shader, "mouse");
-	r->locTime = shader_get_location(r->shader, "time");
-	shader_unbind();
-
-	/* create a new framebuffer */
+	// create a new framebuffer
 	glGenFramebuffers(1, &r->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, r->fbo);
 
-	/* create a new texture */
+	// create a new texture
 	glGenTextures(1, &r->texture);
 	glBindTexture(GL_TEXTURE_2D, r->texture);
 
@@ -190,11 +231,11 @@ void init_renderer(Renderer* r, int x, int y, int width, int height, char *shade
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	/* apply texture to framebuffer */
+	// apply texture to framebuffer
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, r->texture, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	/* width and height might change in window mode */
+	// width and height might change in window mode
 	r->height = height;
 	r->width = width;
 }
@@ -214,7 +255,7 @@ void set_pixmap_to_root(Pixmap pmap_d1, int width, int height) {
 	unsigned long length, after;
 	unsigned char *data_root = NULL, *data_esetroot = NULL;
 
-	/* local display to set closedownmode on */
+	// local display to set closedownmode on
 	Display *dpy2;
 	Window root2;
 
@@ -267,7 +308,7 @@ void set_pixmap_to_root(Pixmap pmap_d1, int width, int height) {
 		XFree(data_esetroot);
 	}
 
-	/* This will locate the property, creating it if it doesn't exist */
+	// This will locate the property, creating it if it doesn't exist
 	prop_root = XInternAtom(dpy2, "_XROOTPMAP_ID", False);
 	prop_esetroot = XInternAtom(dpy2, "ESETROOT_PMAP_ID", False);
 
@@ -296,10 +337,10 @@ void render(Renderer* r, float time) {
 	XWindowAttributes gwa;
 	Imlib_Image img;
 
-	/* set renderer's window as context */
+	// set renderer's window as context
 	glXMakeCurrent(dpy, r->window, glc);
 
-	/* get new size in case the window was resized */
+	// get new size in case the window was resized
 	if (options.mode == WINDOW) {
 		XGetWindowAttributes(dpy, r->window, &gwa);
 
@@ -308,26 +349,28 @@ void render(Renderer* r, float time) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, r->width, r->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
 
-	/* change viewport, and scale it down depending on quality level */
+	// change viewport, and scale it down depending on quality level
 	glViewport(0, 0, r->width * options.quality, r->height * options.quality);
 
-	/* clear Framebuffer */
+	// clear Framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, r->fbo);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	/* capture mouse position */
+	// capture mouse position
 	XQueryPointer(dpy, root, &window_returned,
 			&window_returned, &root_x, &root_y, &win_x, &win_y,
 			&mask_return);
 
-	/* bind shader background */
-	shader_bind(r->shader);
-	shader_set_float(r->locTime, time);
-	shader_set_vec2(r->locResolution, r->width * options.quality, r->height * options.quality);
-	shader_set_vec2(r->locMouse, (float)root_x / r->width, 1.0 - (float)root_y / r->height);
+	// bind shader background
+	if (r->shader) {
+		shader_bind(r->shader);
+		shader_set_float(r->locTime, time);
+		shader_set_vec2(r->locResolution, r->width * options.quality, r->height * options.quality);
+		shader_set_vec2(r->locMouse, (float)root_x / r->width, 1.0 - (float)root_y / r->height);
+	}
 
-	/* render shader on framebuffer */
+	// render shader on framebuffer
 	glPushMatrix();
 	glColor3f(1.0, 1.0, 1.0);
 	glBegin(GL_QUADS);
@@ -337,21 +380,23 @@ void render(Renderer* r, float time) {
 	glVertex2f(0.0, 1.0);
 	glEnd();
 	glPopMatrix();
+
 	shader_unbind();
 
-	/* change viewport to default */
+	// change viewport to default
 	glViewport(0, 0, r->width, r->height);
 
-	/* bind texture to render it on screen */
+	// bind texture to render it on screen
 	glEnable(GL_TEXTURE_2D);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // unbind FBO to set the default framebuffer
-	glBindTexture(GL_TEXTURE_2D, r->texture); // color attachment texture
+	//glBindTexture(GL_TEXTURE_2D, r->texture); // color attachment texture
+	glBindTexture(GL_TEXTURE_2D, r->image.id); // color attachment texture
 
-	/* clear screen */
+	// clear screen
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	/* render texture on screen */
+	// render texture on screen
 	glPushMatrix();
 	glScalef(1.0 / options.quality, 1.0 / options.quality, 1.0);
 	glTranslatef(0.0, options.quality - 1.0, 0.0);
@@ -369,11 +414,12 @@ void render(Renderer* r, float time) {
 	glPopMatrix();
 
 	// in root mode, get pixels from gl context and convert it to an Pixbuf and draw it on root window
-	if (options.mode == ROOT) { 
+	if (options.mode == ROOT) {
 
-		/* create Imlib_Image from current Frame */
+		// create Imlib_Image from current Frame
 		glReadPixels(0, 0, r->width, r->height, GL_BGRA, GL_UNSIGNED_BYTE, r->buffer); // a lot of cpu usage here :/
 
+		
 		img = imlib_create_image_using_data(r->width, r->height, r->buffer);
 		imlib_context_set_image(img);
 		imlib_context_set_drawable(r->pmap);
@@ -381,7 +427,14 @@ void render(Renderer* r, float time) {
 		imlib_render_image_on_drawable_at_size(0, 0, r->width, r->height);
 		imlib_free_image_and_decache();
 
+		//XImage* image = XCreateImage(dpy, vi->visual, 24, ZPixmap, 0, r->buffer, r->width, r->height, 32, 0);
+		//Pixmap* pix;
+
+		//r = XPutImage(dpy, window, gc, ximage, 0, 0, 0, 0, r->width, r->height);
 		set_pixmap_to_root(r->pmap, r->width, r->height);
+
+		//XFreePixmap(dpy, pix);
+
 	} else {
 		glXSwapBuffers(dpy, r->window);
 	}
@@ -394,14 +447,14 @@ static void sig_handler(int sig) {
 int main(int argc, char **argv) {
 	signal(SIGINT, sig_handler);
 
-	int argument_count = 5;
+	int argument_count = 7;
 	ArgOption arguments[] = {
 		(ArgOption) {
 			.abbreviation = "-q", .value = "1", .name = "--quality",
-			.description = "Changes quality level of the shader, default: 1."
+			.description = "Changes quality level of the shader, default: 1"
 		}, (ArgOption) {
-			.abbreviation = "-s", .value = "1", .name = "--speed",
-			.description = "Changes animation speed, default 1."
+			.abbreviation = "-r", .value = "1", .name = "--speed",
+			.description = "Changes animation speed, default 1"
 		}, (ArgOption) {
 			.abbreviation = "-o", .value = "1", .name = "--opacity",
 			.description = "Sets background window transparency if in window/background mode"
@@ -409,8 +462,14 @@ int main(int argc, char **argv) {
 			.abbreviation = "-m", .value = "background", .name = "--mode",
 			.description = "Changes rendering mode. Modes: root, window, background"
 		}, (ArgOption) {
-			.abbreviation = "-d", .value = "full", .name = "--display", // full: render shader on all screens, TODO: other name for 'full', specify shader for monitor
+			.abbreviation = "-d", .value = "full", .name = "--display",
 			.description = ""
+		}, (ArgOption) {
+			.abbreviation = "-s", .value = NULL, .name = "--shader",
+			.description = "Path to a glsl shader"
+		}, (ArgOption) {
+			.abbreviation = "-i", .value = NULL, .name = "--image",
+			.description = "Path to a jpg or png image"
 	}};
 
 	// Check for arguments
@@ -419,16 +478,25 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
-	char *file_path = get_argument_values(argc, argv, arguments, argument_count);
-	if (*file_path == '\0') {
-		fprintf(stderr, "Error: File not specified!\n");
+	get_argument_values(argc, argv, arguments, argument_count);
+
+	char* shader_path = arguments[5].value;
+	char* image_path = arguments[6].value;
+
+	if (shader_path == NULL && image_path == NULL) {
+		fprintf(stderr, "Error: No shader or file selected!\n");
 		print_help(arguments, argument_count);
 		return EXIT_FAILURE;
 	}
 
 	// Check if file exists
-	if (access(file_path, F_OK) == -1) {
-		fprintf(stderr, "ERROR: File at '%s' does not exist\n", file_path);
+	if (shader_path && access(shader_path, F_OK) == -1) {
+		fprintf(stderr, "ERROR: File at '%s' does not exist\n", shader_path);
+		return EXIT_FAILURE;
+	}
+
+	if (image_path && access(image_path, F_OK) == -1) {
+		fprintf(stderr, "ERROR: File at '%s' does not exist\n", image_path);
 		return EXIT_FAILURE;
 	}
 	
@@ -445,7 +513,7 @@ int main(int argc, char **argv) {
 
 	init();
 
-	/* Monitors */
+	// Monitors
 	Screen *screen = ScreenOfDisplay(dpy, 0);
 	int width = screen->width;
 	int height = screen->height;
@@ -495,16 +563,16 @@ int main(int argc, char **argv) {
 	// TODO: create multiple rendereres with specific shaders depending on argument: https://github.com/danielfvm/Show/issues/7
 	int renderer_count = 1;
 	renderers = (Renderer*) malloc(sizeof(Renderer) * renderer_count);
-	init_renderer(renderers, x, y, width, height, file_path);
+	init_renderer(renderers, x, y, width, height, shader_path, image_path);
 
-	/* setup timer */
+	// setup timer
 	struct timespec start, end;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 
 	int i;
 	float time;
 
-	/* Main loop */
+	// Main loop
 	while (keep_running) {
 		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 		time = ((end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000.0f) * 0.000001f;
@@ -516,7 +584,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	/* Free resources */
+	// Free resources
 	for (i = 0; i < renderer_count; i++) {
 		if (options.mode == ROOT) {
 			free(renderers[i].buffer);

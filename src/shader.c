@@ -66,25 +66,16 @@ int shader_check_compile_errors(Shader shader, const char *type) {
 	return 1;
 }
 
-Shader shader_compile(char* filepath) {
+Shader shader_compile(char* vShaderCode, char* fShaderCode) {
 	unsigned int vertex, fragment;
-	const char *vShaderCode = "void main(void){\ngl_Position=ftransform();\n}";
-	char *fShaderCode;
-
 	Shader shader = 0;
-
-	/* read src of fragment shader */
-	if ((fShaderCode = readFile(filepath)) == NULL) {
-		return 0;
-	}
 
 	/* vertex shader */
 	vertex = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertex, 1, &vShaderCode, NULL);
+	glShaderSource(vertex, 1, (const GLchar *const *)&vShaderCode, NULL);
 	glCompileShader(vertex);
 
 	if (!shader_check_compile_errors(vertex, "VERTEX")) {
-		free(fShaderCode);
 		return 0;
 	}
 
@@ -95,7 +86,6 @@ Shader shader_compile(char* filepath) {
 
 	if (!shader_check_compile_errors(fragment, "FRAGMENT")) {
 		glDeleteShader(vertex);
-		free(fShaderCode);
 		return 0;
 	}
 
@@ -108,14 +98,12 @@ Shader shader_compile(char* filepath) {
 	if (!shader_check_compile_errors(shader, "PROGRAM")) {
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
-		free(fShaderCode);
 		return 0;
 	}
 
 	/* delete the shaders as they're linked into our program now and no longer necessary */
 	glDeleteShader(vertex);
 	glDeleteShader(fragment);
-	free(fShaderCode);
 
 	return shader;
 }

@@ -17,7 +17,7 @@ int shader_check_compile_errors(Shader shader, const char *type);
 /*
  *  Compile shader from path, vertex shader is already included
  */
-Shader shader_compile(char* filepath);
+Shader shader_compile(char* vShaderCode, char* fShaderCode);
 
 /*
  *  Bind shader to current gl context
