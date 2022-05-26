@@ -2,6 +2,7 @@
 build
 bin
 obj
+__pycache__
 
 # other
 .cache

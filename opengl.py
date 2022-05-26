@@ -7,6 +7,8 @@ import time
 import io
 import math
 
+import mouse
+
 import os
 import struct
 import xcffib
@@ -213,10 +215,12 @@ class ElementShader(Element):
         })
 
     def render(self, elapsed, width, height, quality):
+        mouseX, mouseY = mouse.get_position()
+
         gl.glUseProgram(self.shader_id)
         gl.glUniform2f(gl.glGetUniformLocation(self.shader_id, "resolution"), int(width * quality), int(height * quality))
         gl.glUniform1f(gl.glGetUniformLocation(self.shader_id, "time"), elapsed)
-        gl.glUniform2f(gl.glGetUniformLocation(self.shader_id, "mouse"), 0.1, 0.1) # todo
+        gl.glUniform2f(gl.glGetUniformLocation(self.shader_id, "mouse"), mouseX / width, 1 - mouseY / height)
 
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
 
@@ -259,7 +263,7 @@ class ElementImage(Element):
         # depending on image type we have an alpha channel
         mode = "".join(Image.Image.getbands(self.tex))
         if mode == "RGB":
-            data = self.tex.tobytes("raw", "RGB", 0, 1)
+            data = self.tex.tobytes("raw", "RGB", 0, -1)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, self.tex.width, self.tex.height, 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, data)
         else:
             data = self.tex.tobytes("raw", "RGBA", 0, -1)
@@ -383,9 +387,7 @@ class PboDownloader():
     gl.glBindBuffer(gl.GL_PIXEL_PACK_BUFFER, 0);
 
 
-
-
-def main_loop(conn, mode, quality, speed, window, files):
+def main_loop(conn, mode, quality, speed, framelimit, window, files):
     old = time.time()
     width = 1920
     height = 1080
@@ -417,8 +419,13 @@ def main_loop(conn, mode, quality, speed, window, files):
             #version 330 core
             uniform sampler2D tex;
             uniform vec2 resolution;
+            uniform bool swap;
             void main() {
-              gl_FragColor = texture(tex, gl_FragCoord.xy / resolution.xy);
+              if (swap) {
+                gl_FragColor = texture(tex, vec2(0, 1) + gl_FragCoord.xy / resolution.xy * vec2(1, -1));
+              } else {
+                gl_FragColor = texture(tex, gl_FragCoord.xy / resolution.xy);
+              }
             }
             ''',
     })
@@ -446,8 +453,6 @@ def main_loop(conn, mode, quality, speed, window, files):
     passed = 0
     elapsed = 0
 
-    FRAME_LIMIT = 60
-
     pbo = PboDownloader(gl.GL_BGRA, width, height, 1)
 
     try:
@@ -456,7 +461,7 @@ def main_loop(conn, mode, quality, speed, window, files):
             # Calculate framerate limit
             now = time.time()
             dt = now - old
-            time.sleep(max(1 / FRAME_LIMIT - dt, 0))
+            time.sleep(max(1 / framelimit - dt, 0))
 
             # calculate deltatime
             now = time.time()
@@ -501,6 +506,7 @@ def main_loop(conn, mode, quality, speed, window, files):
 
             gl.glUseProgram(shader_texture_id)
             gl.glUniform2f(gl.glGetUniformLocation(shader_texture_id, "resolution"), width, height)
+            gl.glUniform1i(gl.glGetUniformLocation(shader_texture_id, "swap"), mode == Mode.ROOT) # root mode needs to be swapped vertically 
 
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)

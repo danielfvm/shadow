@@ -42,6 +42,8 @@ if __name__ == '__main__':
     all_args.add_argument("-o", "--opacity", help="Sets background window transparency, default 1.", default=1, type=float)
     all_args.add_argument("-m", "--mode", help="Changes rendering mode. Modes: root, window, background.", default=Mode.BACKGROUND, type=Mode)
     all_args.add_argument("-d", "--display", help="Selects a monitor", default=None, type=str)
+    all_args.add_argument("-f", "--framelimit", help="Set the maximum framerate limit, default 60", default=60, type=int)
+
 
     args, files = all_args.parse_known_args()
     args = vars(args)
@@ -58,5 +60,5 @@ if __name__ == '__main__':
 
     with opengl.create_main_window(conn, args["mode"], args["opacity"], width, height) as window:
        with opengl.create_vertex_buffer():
-           opengl.main_loop(conn, args["mode"], args["quality"], args["speed"], window, files)
+           opengl.main_loop(conn, args["mode"], args["quality"], args["speed"], args["framelimit"], window, files)
 
