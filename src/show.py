@@ -5,6 +5,7 @@ from utils import Mode
 
 import opengl
 
+import logging
 import argparse
 import xcffib
 import sys
@@ -36,6 +37,8 @@ def parse_argument_monitor(select):
     return get_default_monitor()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+
     all_args = argparse.ArgumentParser()
     all_args.add_argument("-q", "--quality", help="Changes quality level of the shader, default 1.", default=1, type=float)
     all_args.add_argument("-s", "--speed", help="Changes animation speed, default 1.", default=1, type=float)
@@ -57,6 +60,11 @@ if __name__ == '__main__':
     else:
         width = monitor.width
         height = monitor.height
+
+    if len(files) <= 0:
+        all_args.print_help()
+        exit(0)
+
 
     with opengl.create_main_window(conn, args["mode"], args["opacity"], width, height) as window:
        with opengl.create_vertex_buffer():

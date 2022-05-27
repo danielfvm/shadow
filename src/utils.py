@@ -2,7 +2,10 @@ import xcffib
 import cairocffi
 import cairocffi.pixbuf
 import xcffib.xproto
+
+import struct
 import enum
+import io
 
 def kill(conn, screen):
     XA_PIXMAP = 20
@@ -117,3 +120,18 @@ class Mode(enum.Enum):
     BACKGROUND = "background"
     ROOT = "root"
 
+
+# Origional function from "xproto.py", because of "xcffib.pack_list" 
+# it was too slow and was removed in this function.
+def PutImage(conn, format, drawable, gc, width, height, dst_x, dst_y, left_pad, depth, data, is_checked=False):
+    buf = io.BytesIO()
+
+    p = struct.pack("=xB2xIIHHhhBB2x", format, drawable, gc, width, height, dst_x, dst_y, left_pad, depth)
+    buf.write(p)
+    buf.write(data)
+    conn.core.send_request(72, buf, is_checked=is_checked)
+
+
+def load_file(path):
+    with open(path, 'r') as file:
+        return file.read()
