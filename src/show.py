@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
 from screeninfo import get_monitors
-from utils import Mode
 
 import opengl
+from config import BackgroundMode, Config, QualityMode
 
 import logging
 import argparse
@@ -40,21 +40,29 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
     all_args = argparse.ArgumentParser()
-    all_args.add_argument("-q", "--quality", help="Changes quality level of the shader, default 1.", default=1, type=float)
-    all_args.add_argument("-s", "--speed", help="Changes animation speed, default 1.", default=1, type=float)
-    all_args.add_argument("-o", "--opacity", help="Sets background window transparency, default 1.", default=1, type=float)
-    all_args.add_argument("-m", "--mode", help="Changes rendering mode. Modes: root, window, background.", default=Mode.BACKGROUND, type=Mode)
-    all_args.add_argument("-d", "--display", help="Selects a monitor", default=None, type=str)
-    all_args.add_argument("-f", "--framelimit", help="Set the maximum framerate limit, default 60", default=60, type=int)
-
+    all_args.add_argument("-q", "--quality", help="Changes quality level of the shader, default 1.", default=Config.QUALITY, type=float)
+    all_args.add_argument("-s", "--speed", help="Changes animation speed, default 1.", default=Config.SPEED, type=float)
+    all_args.add_argument("-o", "--opacity", help="Sets background window transparency, default 1.", default=Config.OPACITY, type=float)
+    all_args.add_argument("-m", "--mode", help="Changes rendering mode. Modes: root, window, background.", default=Config.BACKGROUND_MODE, type=BackgroundMode)
+    all_args.add_argument("-d", "--display", help="Selects a monitor", default=Config.DISPLAY, type=str)
+    all_args.add_argument("-f", "--framelimit", help="Set the maximum framerate limit, default 60", default=Config.FRAMELIMIT, type=int)
+    all_args.add_argument("-qm", "--qualitymode", help="Should it pixelize or smoothen the image at lower quality? default: smooth", default=Config.QUALITY_MODE, type=QualityMode)
 
     args, files = all_args.parse_known_args()
     args = vars(args)
 
-    monitor = parse_argument_monitor(args["display"])
+    Config.QUALITY = args["quality"]
+    Config.SPEED = args["speed"]
+    Config.OPACITY = args["opacity"]
+    Config.BACKGROUND_MODE = args["mode"]
+    Config.DISPLAY = args["display"]
+    Config.FRAMELIMIT = args["framelimit"]
+    Config.QUALITY_MODE = args["qualitymode"]
+
+    monitor = parse_argument_monitor(Config.DISPLAY)
     conn = xcffib.Connection(display=os.environ.get("DISPLAY"))
 
-    if args["mode"] == Mode.WINDOW:
+    if Config.BACKGROUND_MODE == BackgroundMode.WINDOW:
         width = int(monitor.width / 2)
         height = int(monitor.height / 2)
     else:
@@ -66,7 +74,7 @@ if __name__ == '__main__':
         exit(0)
 
 
-    with opengl.create_main_window(conn, args["mode"], args["opacity"], width, height) as window:
+    with opengl.create_main_window(conn, width, height) as window:
        with opengl.create_vertex_buffer():
-           opengl.main_loop(conn, args["mode"], args["quality"], args["speed"], args["framelimit"], window, files)
+           opengl.main_loop(conn, window, files)
 

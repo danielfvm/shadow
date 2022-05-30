@@ -17,10 +17,12 @@ import time
 import glfw
 import sys
 
+from config import BackgroundMode, QualityMode, Config
+
 log = logging.getLogger(__name__)
 
 @contextlib.contextmanager
-def create_main_window(conn, mode, opacity, width, height):
+def create_main_window(conn, width, height):
     if not glfw.init():
         log.error('failed to initialize GLFW')
         sys.exit(1)
@@ -32,7 +34,7 @@ def create_main_window(conn, mode, opacity, width, height):
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         glfw.window_hint(glfw.DOUBLEBUFFER, True)
 
-        if mode == Mode.ROOT:
+        if Config.BACKGROUND_MODE == BackgroundMode.ROOT:
             glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
         log.debug('opening window')
@@ -41,12 +43,12 @@ def create_main_window(conn, mode, opacity, width, height):
             log.error('failed to open GLFW window.')
             sys.exit(2)
 
-        if mode == Mode.BACKGROUND:
+        if Config.BACKGROUND_MODE == BackgroundMode.BACKGROUND:
             log.debug('changed window typehint to background')
             set_window_to_background(conn, glfw.get_x11_window(window))
 
-        if mode != Mode.ROOT and opacity < 1:
-            set_window_opacity(conn, glfw.get_x11_window(window), opacity)
+        if Config.BACKGROUND_MODE != BackgroundMode.ROOT and Config.OPACITY < 1:
+            set_window_opacity(conn, glfw.get_x11_window(window), Config.OPACITY)
 
         glfw.make_context_current(window)
 
@@ -115,10 +117,13 @@ def create_framebuffer(width, height):
 
     gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, None)
 
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
-    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+
+    if Config.QUALITY_MODE == QualityMode.PIXEL:
+        gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
 
     # apply texture to framebuffer
     gl.glFramebufferTexture2D(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0, gl.GL_TEXTURE_2D, texture, 0)
@@ -126,14 +131,14 @@ def create_framebuffer(width, height):
 
     return texture, fbo
 
-def main_loop(conn, mode, quality, speed, framelimit, window, files):
+def main_loop(conn, window, files):
     old = time.time()
     width = 1920
     height = 1080
 
     screen = conn.get_setup().roots[0]
 
-    texture, fbo = create_framebuffer(int(width * quality), int(height * quality))
+    texture, fbo = create_framebuffer(int(width * Config.QUALITY), int(height * Config.QUALITY))
 
     elements = []
 
@@ -202,14 +207,14 @@ def main_loop(conn, mode, quality, speed, framelimit, window, files):
             # Calculate framerate limit
             now = time.time()
             dt = now - old
-            time.sleep(max(1 / framelimit - dt, 0))
+            time.sleep(max(1 / Config.FRAMELIMIT - dt, 0))
 
             # calculate deltatime
             now = time.time()
             dt = now - old
             old = now
 
-            elapsed += dt * speed
+            elapsed += dt * Config.SPEED
             passed += dt
             frames += 1
 
@@ -226,11 +231,11 @@ def main_loop(conn, mode, quality, speed, framelimit, window, files):
                 height = nheight
                 gl.glDeleteFramebuffers(1, fbo)
                 gl.glDeleteTextures(1, texture)
-                texture, fbo = create_framebuffer(int(width * quality), int(height * quality))
+                texture, fbo = create_framebuffer(int(width * Config.QUALITY), int(height * Config.QUALITY))
 
 
             # Render shader background animation to framebuffer with less quality if set
-            gl.glViewport(0, 0, int(width * quality), int(height * quality))
+            gl.glViewport(0, 0, int(width * Config.QUALITY), int(height * Config.QUALITY))
             gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, fbo)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
@@ -238,7 +243,7 @@ def main_loop(conn, mode, quality, speed, framelimit, window, files):
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
             for element in elements:
-                element.render(elapsed, width, height, quality)
+                element.render(elapsed, width, height)
 
             # Draw framebuffer with normal size to window
             gl.glViewport(0, 0, width, height)
@@ -247,13 +252,13 @@ def main_loop(conn, mode, quality, speed, framelimit, window, files):
 
             shader_texture.bind()
             gl.glUniform2f(shader_texture.get_uniform("resolution"), width, height)
-            gl.glUniform1i(shader_texture.get_uniform("swap"), mode == Mode.ROOT) # root mode needs to be swapped vertically 
+            gl.glUniform1i(shader_texture.get_uniform("swap"), Config.BACKGROUND_MODE == BackgroundMode.ROOT) # root mode needs to be swapped vertically 
 
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
 
             # Convert framebuffer to pixmap and set it to root window
-            if mode == Mode.ROOT:
+            if Config.BACKGROUND_MODE == BackgroundMode.ROOT:
                 def pbo_to_screen():
                     PutImage(conn, xcffib.xproto.ImageFormat.ZPixmap, pixmap, gc, width, height, 0, 0, 0, screen.root_depth, pbo.pixels)
                     set_wallpaper_pixmap(conn, screen, pixmap)

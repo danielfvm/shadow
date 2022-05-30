@@ -4,7 +4,6 @@ import cairocffi.pixbuf
 import xcffib.xproto
 
 import struct
-import enum
 import io
 
 def kill(conn, screen):
@@ -114,11 +113,6 @@ def load_pixmap(conn, screen, path):
         context.paint()
 
     return pixmap
-
-class Mode(enum.Enum):
-    WINDOW = "window"
-    BACKGROUND = "background"
-    ROOT = "root"
 
 
 # Origional function from "xproto.py", because of "xcffib.pack_list" 

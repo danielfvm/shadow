@@ -5,14 +5,12 @@ import mouse
 from utils import load_file
 
 from shader import Shader
+from config import Config
 
 import cv2
-
 import logging
 
 log = logging.getLogger(__name__)
-
-import time
 
 class Element():
     def __init__(self):
@@ -38,11 +36,11 @@ class ElementShader(Element):
             gl.GL_FRAGMENT_SHADER: load_file(file)
         })
 
-    def render(self, elapsed, width, height, quality):
+    def render(self, elapsed, width, height):
         mouseX, mouseY = mouse.get_position()
 
         self.shader.bind()
-        gl.glUniform2f(self.shader.get_uniform("resolution"), int(width * quality), int(height * quality))
+        gl.glUniform2f(self.shader.get_uniform("resolution"), int(width * Config.QUALITY), int(height * Config.QUALITY))
         gl.glUniform1f(self.shader.get_uniform("time"), elapsed)
         gl.glUniform2f(self.shader.get_uniform("mouse"), mouseX / width, 1 - mouseY / height)
 
@@ -57,9 +55,9 @@ class ElementScript(Element):
         if hasattr(self.script, "init"):
             self.script.init()
 
-    def render(self, elapsed, width, height, quality):
+    def render(self, elapsed, width, height):
         if hasattr(self.script, "render"):
-            self.script.render(elapsed, width, height, quality)
+            self.script.render(elapsed, width, height)
 
     def cleanup(self):
         if hasattr(self.script, "cleanup"):
@@ -140,7 +138,7 @@ class ElementVideo(Element):
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, self.tex_width, self.tex_height, 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, data)
 
-    def render(self, _, width, height, quality):
+    def render(self, _, width, height):
         self.bind_frame()
 
         # scale to fit screen
@@ -155,8 +153,8 @@ class ElementVideo(Element):
 
         # bind image and render it
         self.shader.bind()
-        gl.glUniform2f(self.shader.get_uniform("position"), x * quality, y * quality)
-        gl.glUniform2f(self.shader.get_uniform("resolution"), w * quality, h * quality)
+        gl.glUniform2f(self.shader.get_uniform("position"), x * Config.QUALITY, y * quality)
+        gl.glUniform2f(self.shader.get_uniform("resolution"), w * Config.QUALITY, h * quality)
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
 
     def cleanup(self):
@@ -216,7 +214,7 @@ class ElementImage(Element):
                 '''
         })
 
-    def render(self, _, width, height, quality):
+    def render(self, _, width, height):
 
         # scale to fit screen
         s = max(width / self.tex.width, height / self.tex.height)
@@ -231,8 +229,8 @@ class ElementImage(Element):
         # bind image and render it
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
         self.shader.bind()
-        gl.glUniform2f(self.shader.get_uniform("position"), x * quality, y * quality)
-        gl.glUniform2f(self.shader.get_uniform("resolution"), w * quality, h * quality)
+        gl.glUniform2f(self.shader.get_uniform("position"), x * Config.QUALITY, y * Config.QUALITY)
+        gl.glUniform2f(self.shader.get_uniform("resolution"), w * Config.QUALITY, h * Config.QUALITY)
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
 
 
