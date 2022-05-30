@@ -62,19 +62,16 @@ if __name__ == '__main__':
     monitor = parse_argument_monitor(Config.DISPLAY)
     conn = xcffib.Connection(display=os.environ.get("DISPLAY"))
 
-    if Config.BACKGROUND_MODE == BackgroundMode.WINDOW:
-        width = int(monitor.width / 2)
-        height = int(monitor.height / 2)
-    else:
-        width = monitor.width
-        height = monitor.height
+    if Config.BACKGROUND_MODE != BackgroundMode.WINDOW:
+        Config.WIDTH = monitor.width
+        Config.HEIGHT = monitor.height
 
     if len(files) <= 0:
         all_args.print_help()
         exit(0)
 
 
-    with opengl.create_main_window(conn, width, height) as window:
+    with opengl.create_main_window(conn) as window:
        with opengl.create_vertex_buffer():
            opengl.main_loop(conn, window, files)
 

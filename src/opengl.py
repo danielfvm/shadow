@@ -22,7 +22,7 @@ from config import BackgroundMode, QualityMode, Config
 log = logging.getLogger(__name__)
 
 @contextlib.contextmanager
-def create_main_window(conn, width, height):
+def create_main_window(conn):
     if not glfw.init():
         log.error('failed to initialize GLFW')
         sys.exit(1)
@@ -38,7 +38,7 @@ def create_main_window(conn, width, height):
             glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
         log.debug('opening window')
-        window = glfw.create_window(width, height, "Show", None, None)
+        window = glfw.create_window(Config.WIDTH, Config.HEIGHT, "Show", None, None)
         if not window:
             log.error('failed to open GLFW window.')
             sys.exit(2)
@@ -106,7 +106,7 @@ def create_vertex_buffer():
             gl.glDisableVertexAttribArray(attr_id)
             gl.glDeleteBuffers(1, [vertex_buffer])
 
-def create_framebuffer(width, height):
+def create_framebuffer():
     # create a new framebuffer
     fbo = gl.glGenFramebuffers(1)
     gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, fbo)
@@ -114,6 +114,9 @@ def create_framebuffer(width, height):
     # create a new texture
     texture = gl.glGenTextures(1)
     gl.glBindTexture(gl.GL_TEXTURE_2D, texture)
+
+    width = int(Config.WIDTH * Config.QUALITY)
+    height = int(Config.HEIGHT * Config.QUALITY)
 
     gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, None)
 
@@ -133,24 +136,16 @@ def create_framebuffer(width, height):
 
 def main_loop(conn, window, files):
     old = time.time()
-    width = 1920
-    height = 1080
-
     screen = conn.get_setup().roots[0]
 
-    texture, fbo = create_framebuffer(int(width * Config.QUALITY), int(height * Config.QUALITY))
+    texture, fbo = create_framebuffer()
 
-    elements = []
+    components = []
 
     for file in files:
-        if file.endswith(".glsl"):
-            elements.append(ElementShader(file))
-        elif file.endswith(".py"):
-            elements.append(ElementScript(file))
-        elif file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg"):
-            elements.append(ElementImage(file))
-        elif file.endswith(".mp4") or file.endswith(".mkv"):
-            elements.append(ElementVideo(file))
+        component = create_component_from_file(file)
+        if component is not None:
+            components.append(component)
 
     shader_texture = Shader({
         gl.GL_VERTEX_SHADER: '''\
@@ -182,8 +177,8 @@ def main_loop(conn, window, files):
         screen.root_depth,
         pixmap,
         screen.root,
-        width,
-        height,
+        Config.WIDTH,
+        Config.HEIGHT,
     )
 
     # GC used for converting OpenGL's framebuffer to a pixmap
@@ -199,7 +194,7 @@ def main_loop(conn, window, files):
     passed = 0
     elapsed = 0
 
-    pbo = PboDownloader(gl.GL_BGRA, width, height, 1)
+    pbo = PboDownloader(gl.GL_BGRA, Config.WIDTH, Config.HEIGHT, 1)
 
     try:
         while glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and not glfw.window_should_close(window):
@@ -214,7 +209,8 @@ def main_loop(conn, window, files):
             dt = now - old
             old = now
 
-            elapsed += dt * Config.SPEED
+            update_time = dt * Config.SPEED
+            elapsed += update_time
             passed += dt
             frames += 1
 
@@ -226,32 +222,36 @@ def main_loop(conn, window, files):
             # If window size changes, update width, height and framebuffer
             nwidth, nheight = glfw.get_window_size(window)
 
-            if nwidth != width or nheight != height:
-                width = nwidth
-                height = nheight
+            if nwidth != Config.WIDTH or nheight != Config.HEIGHT:
+                # width and height should get to small
+                Config.WIDTH = max(nwidth, 10)
+                Config.HEIGHT = max(nheight, 10)
+
+                # Delete existing framebuffer and create a new one with new scale
                 gl.glDeleteFramebuffers(1, fbo)
                 gl.glDeleteTextures(1, texture)
-                texture, fbo = create_framebuffer(int(width * Config.QUALITY), int(height * Config.QUALITY))
+                texture, fbo = create_framebuffer()
 
 
             # Render shader background animation to framebuffer with less quality if set
-            gl.glViewport(0, 0, int(width * Config.QUALITY), int(height * Config.QUALITY))
+            gl.glViewport(0, 0, int(Config.WIDTH * Config.QUALITY), int(Config.HEIGHT * Config.QUALITY))
             gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, fbo)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
             gl.glEnable(gl.GL_BLEND)
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
-            for element in elements:
-                element.render(elapsed, width, height)
+            # Update all components
+            for component in components:
+                component.render(update_time)
 
             # Draw framebuffer with normal size to window
-            gl.glViewport(0, 0, width, height)
+            gl.glViewport(0, 0, Config.WIDTH, Config.HEIGHT)
             gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)  # unbind FBO to set the default framebuffer
             gl.glBindTexture(gl.GL_TEXTURE_2D, texture) # color attachment texture
 
             shader_texture.bind()
-            gl.glUniform2f(shader_texture.get_uniform("resolution"), width, height)
+            gl.glUniform2f(shader_texture.get_uniform("resolution"), Config.WIDTH, Config.HEIGHT)
             gl.glUniform1i(shader_texture.get_uniform("swap"), Config.BACKGROUND_MODE == BackgroundMode.ROOT) # root mode needs to be swapped vertically 
 
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -260,7 +260,7 @@ def main_loop(conn, window, files):
             # Convert framebuffer to pixmap and set it to root window
             if Config.BACKGROUND_MODE == BackgroundMode.ROOT:
                 def pbo_to_screen():
-                    PutImage(conn, xcffib.xproto.ImageFormat.ZPixmap, pixmap, gc, width, height, 0, 0, 0, screen.root_depth, pbo.pixels)
+                    PutImage(conn, xcffib.xproto.ImageFormat.ZPixmap, pixmap, gc, Config.WIDTH, Config.HEIGHT, 0, 0, 0, screen.root_depth, pbo.pixels)
                     set_wallpaper_pixmap(conn, screen, pixmap)
 
                 pbo.download()
@@ -278,8 +278,8 @@ def main_loop(conn, window, files):
 
     del shader_texture
 
-    for element in elements:
-        element.cleanup()
+    for component in components:
+        component.cleanup()
 
     conn.core.FreePixmap(pixmap)
     conn.core.FreeGC(gc)

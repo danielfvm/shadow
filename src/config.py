@@ -18,3 +18,5 @@ class Config():
     QUALITY: float = 1.0
     QUALITY_MODE = QualityMode.SMOOTH
 
+    WIDTH: int = 900
+    HEIGHT: int = 600
