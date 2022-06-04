@@ -10,7 +10,10 @@ import argparse
 import xcffib
 import sys
 import os
+import glfw
 
+
+log = logging.getLogger(__name__)
 
 def get_default_monitor():
     monitors = get_monitors()
@@ -38,6 +41,10 @@ def parse_argument_monitor(select):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
+
+    if not glfw.init():
+        log.error('failed to initialize GLFW')
+        sys.exit(1)
 
     all_args = argparse.ArgumentParser()
     all_args.add_argument("-q", "--quality", help="Changes quality level of the shader, default 1.", default=Config.QUALITY, type=float)
@@ -70,8 +77,11 @@ if __name__ == '__main__':
         all_args.print_help()
         exit(0)
 
-
     with opengl.create_main_window(conn) as window:
-       with opengl.create_vertex_buffer():
-           opengl.main_loop(conn, window, files)
+        centerX = int((monitor.width - Config.WIDTH) / 2)
+        centerY = int((monitor.height - Config.HEIGHT) / 2)
+        glfw.set_window_pos(window, monitor.x + centerX, monitor.y + centerY)
+
+        with opengl.create_vertex_buffer():
+            opengl.main_loop(conn, window, files)
 

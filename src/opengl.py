@@ -23,9 +23,6 @@ log = logging.getLogger(__name__)
 
 @contextlib.contextmanager
 def create_main_window(conn):
-    if not glfw.init():
-        log.error('failed to initialize GLFW')
-        sys.exit(1)
     try:
         log.debug('requiring modern OpenGL without any legacy features')
         glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
@@ -48,6 +45,8 @@ def create_main_window(conn):
             set_window_to_background(conn, glfw.get_x11_window(window))
 
         if Config.BACKGROUND_MODE != BackgroundMode.ROOT and Config.OPACITY < 1:
+            log.debug('changed opacity of window')
+            #glfw.set_window_opacity(window, Config.OPACITY)
             set_window_opacity(conn, glfw.get_x11_window(window), Config.OPACITY)
 
         glfw.make_context_current(window)
@@ -270,7 +269,7 @@ def main_loop(conn, window, files):
 
             glfw.poll_events()
     except KeyboardInterrupt:
-        log.debug("user send exit signal")
+        log.debug("Exit signal received")
 
     # Free buffers
     gl.glDeleteFramebuffers(1, fbo)
