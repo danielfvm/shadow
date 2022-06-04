@@ -46,8 +46,7 @@ def create_main_window(conn):
 
         if Config.BACKGROUND_MODE != BackgroundMode.ROOT and Config.OPACITY < 1:
             log.debug('changed opacity of window')
-            #glfw.set_window_opacity(window, Config.OPACITY)
-            set_window_opacity(conn, glfw.get_x11_window(window), Config.OPACITY)
+            glfw.set_window_opacity(window, Config.OPACITY)
 
         glfw.make_context_current(window)
 

@@ -67,20 +67,6 @@ def set_window_to_background(conn, window):
 
     conn.flush()
 
-def set_window_opacity(conn, window, opacity):
-    value = int(opacity * 0xffffffff)
-
-    conn.core.ChangeProperty(
-        xcffib.xproto.PropMode.Replace,
-        window,
-        conn.core.InternAtom(False, 22, '_NET_WM_WINDOW_OPACITY').reply().atom,
-        xcffib.xproto.Atom.CARDINAL,
-        32, 1, [value]
-    )
-
-    conn.flush()
-
-
 def get_root_visual(screen):
     for depth in screen.allowed_depths:
         for visual in depth.visuals:
