@@ -60,9 +60,9 @@ class ComponentScript():
         if hasattr(self.script, "init"):
             self.script.init()
 
-    def render(self, elapsed):
+    def render(self, dt):
         if hasattr(self.script, "render"):
-            self.script.render(elapsed)
+            self.script.render(dt)
 
     def cleanup(self):
         if hasattr(self.script, "cleanup"):
