@@ -21,16 +21,20 @@ Show will create a normal window displaying the effect.
 ## Features
 * Compatible with [glslsandbox.com](http://glslsandbox.com/)
 * Three different render modes
-* Change speed & quality
+* Change speed & quality level
 * Opacity on wallpaper
 * Mouse position support
+* gif support
+* mp4 support (work in progress)
+* jpg/png support
+* expandable with own python scripts (work in progress)
 
 ## Installation
 ```
 $ git clone https://github.com/danielfvm/show.git
 $ cd show
-$ meson <build_dir> --prefix=<installation_dir>
-$ ninja -C <build_dir> install
+$ python -m pip install -r requirements.txt
+$ python src/show.py
 ```
 
 ## Usage
@@ -49,7 +53,3 @@ Example:
 ### Info:
 * Opacity doesn't work on Wayland.
 * Use `root` mode on i3wm
-
-## Future Work
-* Fix not working shaders from glslsandbox.com (missing `uniforms`)
-* Multi monitor support
