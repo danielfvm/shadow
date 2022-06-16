@@ -39,15 +39,23 @@ $ python src/show.py
 
 ## Usage
 ```
-Usage: show <path> [options]
-Options:
-  -q, --quality		Changes quality level of the shader, default 1.
-  -s, --speed  		Changes animation speed, default 1.
-  -m, --mode   		Changes rendering mode. Modes: root, window, background
-  -o, --opacity		Sets background window transparency if in window/background mode
+usage: show.py [-h] [-q QUALITY] [-s SPEED] [-o OPACITY] [-m MODE] [-d DISPLAY] [-f FRAMELIMIT] [-qm QUALITYMODE]
 
-Example:
-  show example.glsl -q 0.5 -m background
+options:
+  -h, --help            show this help message and exit
+  -q QUALITY, --quality QUALITY
+                        Changes quality level of the shader, default 1.
+  -s SPEED, --speed SPEED
+                        Changes animation speed, default 1.
+  -o OPACITY, --opacity OPACITY
+                        Sets background window transparency, default 1.
+  -m MODE, --mode MODE  Changes rendering mode. Modes: root, window, background.
+  -d DISPLAY, --display DISPLAY
+                        Selects a monitor
+  -f FRAMELIMIT, --framelimit FRAMELIMIT
+                        Set the maximum framerate limit, default 60
+  -qm QUALITYMODE, --qualitymode QUALITYMODE
+                        Should it pixelize or smoothen the image at lower quality? default: smooth
 ```
 
 ### Info:
