@@ -34,8 +34,10 @@ def create_main_window(conn):
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         glfw.window_hint(glfw.DOUBLEBUFFER, True)
+        glfw.window_hint(glfw.TRANSPARENT_FRAMEBUFFER, True)
 
         if Config.BACKGROUND_MODE == BackgroundMode.BACKGROUND:
+            glfw.window_hint(glfw.FOCUSED, False)
             glfw.window_hint(glfw.DECORATED, False)
 
         if Config.BACKGROUND_MODE == BackgroundMode.ROOT:
