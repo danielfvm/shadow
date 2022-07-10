@@ -311,6 +311,8 @@ def main_loop(conn, window, files):
 
             mouseX = mouseX / Config.WIDTH
             mouseY = 1 - mouseY / Config.HEIGHT
+            mouseX = 0
+            mouseY = 0
 
             mvp = create_mvp((0.5 - mouseX) * 0.1, (0.5 - mouseY) * 0.1, 1.9)
 
