@@ -62,7 +62,14 @@ options:
 ```
 
 ## Examples
+#### Shader with framerate limit at 30
+```
+python src/show.py -m background -f 30 example/frag0.glsl
+```
+![image](https://media.discordapp.net/attachments/838789700617633862/995583912946434048/Screencast-from-07-10-2022-08_43_30-AM.gif)
 
-### Info:
+
+
+## Infos
 * Opacity doesn't work on Wayland.
 * Use `root` mode on i3wm
