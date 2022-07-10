@@ -37,8 +37,8 @@ def create_main_window(conn):
         glfw.window_hint(glfw.TRANSPARENT_FRAMEBUFFER, True)
 
         if Config.BACKGROUND_MODE == BackgroundMode.BACKGROUND:
-            glfw.window_hint(glfw.FOCUSED, False)
             glfw.window_hint(glfw.DECORATED, False)
+            glfw.window_hint(glfw.FOCUSED, False)
 
         if Config.BACKGROUND_MODE == BackgroundMode.ROOT:
             glfw.window_hint(glfw.VISIBLE, glfw.FALSE)

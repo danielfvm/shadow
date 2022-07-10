@@ -27,9 +27,11 @@ class ComponentShader():
         })
 
         self.elapsed = 0
+        self.frame = 0
 
     def render(self, dt):
         self.elapsed += dt
+        self.frame += 1
 
         mouseX, mouseY = mouse.get_position()
 
@@ -181,6 +183,7 @@ class ComponentAnimatedImage():
         self.textures = []
         self.durations = []
 
+        # TODO: currently loads gif to memory, will cause issues with bigger gifs
         for frame in range(0, self.tex.n_frames):
             self.tex.seek(frame)
             img = self.tex.convert("RGB")
@@ -200,14 +203,8 @@ class ComponentAnimatedImage():
             else:
                 gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
 
-            # depending on image type we have an alpha channel
-            #mode = "".join(Image.Image.getbands(self.tex))
-            #if mode == "RGB":
             data = img.tobytes("raw", "RGB", 0, -1)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, self.tex.width, self.tex.height, 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, data)
-            #else:
-            #    data = self.tex.tobytes("raw", "RGBA", 0, -1)
-            #    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, self.tex.width, self.tex.height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
 
             gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
 
