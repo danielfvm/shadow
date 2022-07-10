@@ -66,14 +66,14 @@ options:
 ```
 python src/show.py -m background -f 30 example/frag0.glsl
 ```
-![image](screenshots/img1.gif)
+![](screenshots/img1.gif)
 
 
 #### Shader with reduced quality (10%) and pixelize
 ```
 python src/show.py -m background -f 30 -q 0.1 -qm pixel example/frag0.glsl
 ```
-![image](screenshots/img2.webm)
+![](screenshots/img2.webm.mov)
 
 
 
