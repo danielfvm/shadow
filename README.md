@@ -2,9 +2,6 @@
 "Show" stands for `Shaders On Wallpaper` and it renders a realtime glsl shader on your Linux desktop.
 It is compatible with most shaders from [glslsandbox.com](http://glslsandbox.com/). Additionally you can put multiple shaders, images, videos and interactive scripts on top of each other to create an amazing looking desktop.
 
-![image](https://user-images.githubusercontent.com/23420640/174047138-8fcfc170-c4ed-4fa3-ab06-8030dd264b46.png)
-
-
 There are currently 3 available render modes:
 
 * Background (default):
@@ -66,8 +63,6 @@ options:
 ```
 python src/show.py -m background -f 30 example/frag0.glsl
 ```
-![](screenshots/img1.gif)
-
 
 #### Shader with reduced quality (10%) and pixelize
 ```
