@@ -1,6 +1,6 @@
 # Show
 "Show" stands for `Shaders On Wallpaper` and it renders a realtime glsl shader on your Linux desktop.
-It is compatible with many shaders from [glslsandbox.com](http://glslsandbox.com/).
+It is compatible with most shaders from [glslsandbox.com](http://glslsandbox.com/). Additionally you can put multiple shaders, images, videos and interactive scripts on top of each other to create an amazing looking desktop.
 
 There are currently 3 available render modes:
 
@@ -21,35 +21,57 @@ Show will create a normal window displaying the effect.
 ## Features
 * Compatible with [glslsandbox.com](http://glslsandbox.com/)
 * Three different render modes
-* Change speed & quality
+* Change speed & quality level
 * Opacity on wallpaper
 * Mouse position support
+* gif support
+* mp4 support (work in progress)
+* jpg/png support
+* expandable with own python scripts (work in progress)
 
 ## Installation
 ```
 $ git clone https://github.com/danielfvm/show.git
 $ cd show
-$ meson <build_dir> --prefix=<installation_dir>
-$ ninja -C <build_dir> install
+$ python -m pip install -r requirements.txt
+$ python src/show.py
 ```
 
 ## Usage
 ```
-Usage: show <path> [options]
-Options:
-  -q, --quality		Changes quality level of the shader, default 1.
-  -s, --speed  		Changes animation speed, default 1.
-  -m, --mode   		Changes rendering mode. Modes: root, window, background
-  -o, --opacity		Sets background window transparency if in window/background mode
+usage: show.py [-h] [-q QUALITY] [-s SPEED] [-o OPACITY] [-m MODE] [-d DISPLAY] [-f FRAMELIMIT] [-qm QUALITYMODE]
 
-Example:
-  show example.glsl -q 0.5 -m background
+options:
+  -h, --help            show this help message and exit
+  -q QUALITY, --quality QUALITY
+                        Changes quality level of the shader, default 1.
+  -s SPEED, --speed SPEED
+                        Changes animation speed, default 1.
+  -o OPACITY, --opacity OPACITY
+                        Sets background window transparency, default 1.
+  -m MODE, --mode MODE  Changes rendering mode. Modes: root, window, background.
+  -d DISPLAY, --display DISPLAY
+                        Selects a monitor
+  -f FRAMELIMIT, --framelimit FRAMELIMIT
+                        Set the maximum framerate limit, default 60
+  -qm QUALITYMODE, --qualitymode QUALITYMODE
+                        Should it pixelize or smoothen the image at lower quality? default: smooth
 ```
 
-### Info:
+## Examples
+#### Shader with framerate limit at 30
+```
+python src/show.py -m background -f 30 example/frag0.glsl
+```
+
+#### Shader with reduced quality (10%) and pixelize
+```
+python src/show.py -m background -f 30 -q 0.1 -qm pixel example/frag0.glsl
+```
+![](screenshots/img2.webm.mov)
+
+
+
+## Infos
 * Opacity doesn't work on Wayland.
 * Use `root` mode on i3wm
-
-## Future Work
-* Fix not working shaders from glslsandbox.com (missing `uniforms`)
-* Multi monitor support

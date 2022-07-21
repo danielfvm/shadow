@@ -1,7 +1,1 @@
-# build directories
-build
-bin
-obj
-
-# other
-.cache
+*.pyc
