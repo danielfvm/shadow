@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "Show"
+version = "0.0.0"
+description = "Shaders On Wallpaper, a live and interactive wallpaper 'engine' for linux"
+authors = [
+	{ name = "danielfvm", email = "ds@xxxmail.eu"},
+]
+[metadata]
+licence = "GPL-3.0-only"
+readme = "README.md"
+homepage = "https://github.com/danielfvm/Show"
+repository = "https://github.com/danielfvm/Show"
+
+[dependencies]
+xcffib = ">= 0.11.1"
+cairocffi = ">= 1.3.0"
+pyopengl = ">= 3.1.6"
+screeninfo = ">= 0.8"
+mouse = ">= 0.7.1"
+opencv-python = ">= 4.6.0.66"
+glfw = ">= 2.5.3"
+scipy = ">= 1.8.1"
+
+[scripts]
+show = "show.py"
