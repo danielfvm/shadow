@@ -7,7 +7,6 @@ from utils import load_file
 from shader import Shader
 from config import Config, QualityMode
 
-import cv2
 import logging
 
 log = logging.getLogger(__name__)
@@ -76,101 +75,14 @@ class ComponentScript():
 
 class ComponentVideo():
     def __init__(self, file):
-        self.texture_id = gl.glGenTextures(1)
-
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-
-        self.video_capture = cv2.VideoCapture(file)
-
-        if not self.video_capture.isOpened():
-            log.error("Failed to open video file " + file)
-            exit(0)
-
-        self.frames = []
-        self.frame_pos = 0
-
-
-        self.frame_count = int(self.video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.tex_width  = self.video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.tex_height = self.video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-        success = True
-
-        while success:
-            success, frame = self.video_capture.read()
-
-            if not success:
-                break
-
-            # convert image to OpenGL texture format
-            image = Image.fromarray(frame)
-            self.tex_width = image.size[0]
-            self.tex_height = image.size[1]
-
-            data = image.tobytes("raw", "BGR", 0, -1)
-
-            self.frames.append(data)
-
-
-        # load shader for texture
-        self.shader = Shader({
-            gl.GL_VERTEX_SHADER: '''
-                #version 330 core
-                layout(location = 0) in vec2 pos;
-
-                void main() {
-                  gl_Position.xy = pos;
-                  gl_Position.w = 1.0;
-                }
-                ''',
-            gl.GL_FRAGMENT_SHADER: '''
-                #version 330 core
-                uniform sampler2D tex;
-                uniform vec2 resolution;
-                uniform vec2 position;
-
-                void main() {
-                    gl_FragColor = texture(tex, gl_FragCoord.xy / resolution.xy - position / resolution.xy);
-                }
-                '''
-        })
-
-
-    def bind_frame(self):
-        data = self.frames[self.frame_pos]
-
-        self.frame_pos += 1
-        if self.frame_pos >= len(self.frames):
-            self.frame_pos = 0
-
-        # create texture
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, self.tex_width, self.tex_height, 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, data)
+        print("Video is currently not supported")
+        pass
 
     def render(self, _):
-        self.bind_frame()
-
-        # scale to fit screen
-        s = max(Config.WIDTH / self.tex_width, Config.HEIGHT / self.tex_height)
-
-        w = self.tex_width * s
-        h = self.tex_height * s
-
-        # center image
-        x = (Config.WIDTH - w) / 2
-        y = (Config.HEIGHT - h) / 2
-
-        # bind image and render it
-        self.shader.bind()
-        gl.glUniform2f(self.shader.get_uniform("position"), x * Config.QUALITY, y * Config.QUALITY)
-        gl.glUniform2f(self.shader.get_uniform("resolution"), w * Config.QUALITY, h * Config.QUALITY)
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+        pass
 
     def cleanup(self):
-        gl.glDeleteTextures(1, self.texture_id)
-        del self.shader
+        pass
 
 
     @staticmethod
