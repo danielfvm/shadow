@@ -189,6 +189,8 @@ def main_loop(conn, window, files):
 
     texture, fbo = create_framebuffer()
 
+    Config.mvp = create_mvp(0, 0, 1.9)
+
     components = []
 
     for file in files:
@@ -307,19 +309,10 @@ def main_loop(conn, window, files):
             gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)  # unbind FBO to set the default framebuffer
             gl.glBindTexture(gl.GL_TEXTURE_2D, texture) # color attachment texture
 
-            mouseX, mouseY = mouse.get_position()
-
-            mouseX = mouseX / Config.WIDTH
-            mouseY = 1 - mouseY / Config.HEIGHT
-            mouseX = 0
-            mouseY = 0
-
-            mvp = create_mvp((0.5 - mouseX) * 0.1, (0.5 - mouseY) * 0.1, 1.9)
-
             shader_texture.bind()
             gl.glUniform2f(shader_texture.get_uniform("resolution"), Config.WIDTH, Config.HEIGHT)
             gl.glUniform1i(shader_texture.get_uniform("swap"), Config.BACKGROUND_MODE == BackgroundMode.ROOT) # root mode needs to be swapped vertically 
-            gl.glUniformMatrix4fv(shader_texture.get_uniform("mvp"), 1, False, mvp)
+            gl.glUniformMatrix4fv(shader_texture.get_uniform("mvp"), 1, False, Config.mvp)
 
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)

@@ -1,3 +1,6 @@
+from importlib.machinery import ModuleSpec
+import importlib.util
+
 from OpenGL import GL as gl
 from PIL import Image
 
@@ -56,14 +59,19 @@ class ComponentShader():
 
 
 class ComponentScript():
-    def __init__(self, file):
-        self.script = __import__(file[:-3])
+    def __init__(self, path):
+        self.spec = importlib.util.spec_from_file_location("", path)
+        assert type(self.spec) is ModuleSpec, "Error"
+        self.script = importlib.util.module_from_spec(self.spec)
+        assert self.spec.loader != None, "Error"
+        self.spec.loader.exec_module(self.script)
+
         if hasattr(self.script, "init"):
             self.script.init()
 
     def render(self, dt):
         if hasattr(self.script, "render"):
-            self.script.render(dt)
+            self.script.render(dt, Config)
 
     def cleanup(self):
         if hasattr(self.script, "cleanup"):
@@ -87,7 +95,7 @@ class ComponentVideo():
 
     @staticmethod
     def is_file(name):
-        return ".mp4" in name or ".mkv" in name # TODO: add remaining supported filetypes
+        return False #".mp4" in name or ".mkv" in name # TODO: add remaining supported filetypes
 
 class ComponentAnimatedImage():
     def __init__(self, file):

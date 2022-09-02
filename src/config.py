@@ -1,4 +1,5 @@
 import enum
+import numpy as np
 
 class BackgroundMode(enum.Enum):
     WINDOW = "window"
@@ -20,3 +21,4 @@ class Config():
 
     WIDTH: int = 900
     HEIGHT: int = 600
+    mvp: np.float32
