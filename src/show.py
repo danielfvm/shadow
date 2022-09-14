@@ -54,6 +54,8 @@ if __name__ == '__main__':
     all_args.add_argument("-d", "--display", help="Selects a monitor", default=Config.DISPLAY, type=str)
     all_args.add_argument("-f", "--framelimit", help="Set the maximum framerate limit, default 60", default=Config.FRAMELIMIT, type=int)
     all_args.add_argument("-qm", "--qualitymode", help="Should it pixelize or smoothen the image at lower quality? default: smooth", default=Config.QUALITY_MODE, type=QualityMode)
+    all_args.add_argument("-width", "--width", help="Set window width", default=None, type=int)
+    all_args.add_argument("-height", "--height", help="Set window height", default=None, type=int)
 
     args, files = all_args.parse_known_args()
     args = vars(args)
@@ -72,6 +74,11 @@ if __name__ == '__main__':
     if Config.BACKGROUND_MODE != BackgroundMode.WINDOW:
         Config.WIDTH = monitor.width
         Config.HEIGHT = monitor.height
+
+    if args["width"]:
+        Config.WIDTH = int(args["width"])
+    if args["height"]:
+        Config.HEIGHT = int(args["height"])
 
     if len(files) <= 0:
         all_args.print_help()

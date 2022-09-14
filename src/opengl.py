@@ -113,12 +113,7 @@ def create_vertex_buffer():
             gl.glDisableVertexAttribArray(attr_id)
             gl.glDeleteBuffers(1, [vertex_buffer])
 
-def create_framebuffer():
-    # create a new framebuffer
-    fbo = gl.glGenFramebuffers(1)
-    gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, fbo)
-
-    # create a new texture
+def create_frametexture():
     texture = gl.glGenTextures(1)
     gl.glBindTexture(gl.GL_TEXTURE_2D, texture)
 
@@ -134,6 +129,17 @@ def create_framebuffer():
 
     if Config.QUALITY_MODE == QualityMode.PIXEL:
         gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+
+    return texture
+
+
+def create_framebuffer():
+    # create a new framebuffer
+    fbo = gl.glGenFramebuffers(1)
+    gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, fbo)
+
+    # create a new texture
+    texture = create_frametexture()
 
     # apply texture to framebuffer
     gl.glFramebufferTexture2D(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0, gl.GL_TEXTURE_2D, texture, 0)
@@ -188,6 +194,7 @@ def main_loop(conn, window, files):
     screen = conn.get_setup().roots[0]
 
     texture, fbo = create_framebuffer()
+    prevTexture = create_frametexture()
 
     Config.mvp = create_mvp(0, 0, 1.9)
 
@@ -291,6 +298,9 @@ def main_loop(conn, window, files):
                 gl.glDeleteTextures(1, texture)
                 texture, fbo = create_framebuffer()
 
+                gl.glDeleteTextures(1, prevTexture)
+                prevTexture = create_frametexture()
+
 
             # Render shader background animation to framebuffer with less quality if set
             gl.glViewport(0, 0, int(Config.WIDTH * Config.QUALITY), int(Config.HEIGHT * Config.QUALITY))
@@ -301,8 +311,18 @@ def main_loop(conn, window, files):
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
             # Update all components
+            window.prevTexture = prevTexture
+            window.texture = texture
             for component in components:
-                component.render(update_time)
+                component.render(update_time, window)
+
+
+            # Copy rendered framebuffer to prevTexture which is being used for "prevBuffer" sampler
+            gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0);
+            gl.glActiveTexture(gl.GL_TEXTURE0);
+            gl.glBindTexture(gl.GL_TEXTURE_2D, prevTexture);
+            gl.glCopyTexSubImage2D(gl.GL_TEXTURE_2D, 0, 0, 0, 0, 0, int(Config.WIDTH * Config.QUALITY), int(Config.HEIGHT * Config.QUALITY));
+
 
             # Draw framebuffer with normal size to window
             gl.glViewport(0, 0, Config.WIDTH, Config.HEIGHT)
@@ -314,7 +334,7 @@ def main_loop(conn, window, files):
             gl.glUniform1i(shader_texture.get_uniform("swap"), Config.BACKGROUND_MODE == BackgroundMode.ROOT) # root mode needs to be swapped vertically 
             gl.glUniformMatrix4fv(shader_texture.get_uniform("mvp"), 1, False, Config.mvp)
 
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
 
             # Convert framebuffer to pixmap and set it to root window

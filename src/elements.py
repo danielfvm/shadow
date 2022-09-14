@@ -11,6 +11,7 @@ from shader import Shader
 from config import Config, QualityMode
 
 import logging
+import glfw
 
 log = logging.getLogger(__name__)
 
@@ -31,19 +32,27 @@ class ComponentShader():
         self.elapsed = 0
         self.frame = 0
 
-    def render(self, dt):
+    def render(self, dt, window):
         self.elapsed += dt
         self.frame += 1
 
         mouseX, mouseY = mouse.get_position()
+        winX, winY = glfw.get_window_pos(window)
 
-        mouseX = mouseX / Config.WIDTH
-        mouseY = 1 - mouseY / Config.HEIGHT
+        mouseX = (mouseX - winX) / Config.WIDTH
+        mouseY = 1 - (mouseY - winY) / Config.HEIGHT
 
         width = int(Config.WIDTH * Config.QUALITY)
         height = int(Config.HEIGHT * Config.QUALITY)
 
         self.shader.bind()
+        gl.glActiveTexture(gl.GL_TEXTURE1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, window.texture) # prev frame
+        gl.glUniform1i(self.shader.get_uniform("currentBuffer"), 1)
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, window.prevTexture) # prev frame
+        gl.glUniform1i(self.shader.get_uniform("prevBuffer"), 0)
+
         gl.glUniform2f(self.shader.get_uniform("resolution"), width, height)
         gl.glUniform2f(self.shader.get_uniform("mouse"), mouseX, mouseY)
         gl.glUniform1f(self.shader.get_uniform("time"), self.elapsed)
@@ -69,9 +78,9 @@ class ComponentScript():
         if hasattr(self.script, "init"):
             self.script.init()
 
-    def render(self, dt):
+    def render(self, dt, window):
         if hasattr(self.script, "render"):
-            self.script.render(dt, Config)
+            self.script.render(dt, window, Config)
 
     def cleanup(self):
         if hasattr(self.script, "cleanup"):
@@ -154,7 +163,7 @@ class ComponentAnimatedImage():
         self.frame = 0
         self.elapsed = 0
 
-    def render(self, dt):
+    def render(self, dt, _):
         self.elapsed += dt
 
         # scale to fit screen
@@ -244,7 +253,7 @@ class ComponentImage():
                 '''
         })
 
-    def render(self, _):
+    def render(self, _, __):
 
         # scale to fit screen
         s = max(Config.WIDTH / self.tex.width, Config.HEIGHT / self.tex.height)
