@@ -153,9 +153,10 @@ class ComponentAnimatedImage():
                 uniform sampler2D tex;
                 uniform vec2 resolution;
                 uniform vec2 position;
+                out vec4 color;
 
                 void main() {
-                    gl_FragColor = texture(tex, gl_FragCoord.xy / resolution.xy - position / resolution.xy);
+                    color = texture(tex, gl_FragCoord.xy / resolution.xy - position / resolution.xy);
                 }
                 '''
         })
@@ -246,9 +247,10 @@ class ComponentImage():
                 uniform sampler2D tex;
                 uniform vec2 resolution;
                 uniform vec2 position;
+                out vec4 color;
 
                 void main() {
-                    gl_FragColor = texture(tex, gl_FragCoord.xy / resolution.xy - position / resolution.xy);
+                    color = texture(tex, gl_FragCoord.xy / resolution.xy - position / resolution.xy);
                 }
                 '''
         })
