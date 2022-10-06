@@ -25,6 +25,7 @@ shader = Shader({
         uniform vec2 resolution;
         const int MAX = ''' + str(BARS-1) + ''';
         uniform float bar[MAX+1];
+        out vec4 outColor
         void main() {
           vec2 p = gl_FragCoord.xy / resolution.xy;
           vec4 color = vec4(0);
@@ -34,7 +35,7 @@ shader = Shader({
           float nlevel = bar[int(nr)+1];
           float dif = distance(p.y, 0.5) - mix(level, nlevel, step);
           color = vec4(vec3(1.0), 1.0 - pow(max(dif, 0), 0.2));
-          gl_FragColor = color;
+          outColor = color;
         }
     ''',
 })

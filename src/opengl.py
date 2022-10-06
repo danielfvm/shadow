@@ -229,10 +229,12 @@ def main_loop(conn, window, files):
             uniform sampler2D tex;
             uniform vec2 resolution;
 
+            out vec4 color;
+
             in vec2 coords;
 
             void main() {
-              gl_FragColor = texture(tex, coords);
+              color = texture(tex, coords);
             }
             ''',
     })
