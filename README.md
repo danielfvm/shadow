@@ -33,8 +33,8 @@ Show will create a normal window displaying the effect.
 ```
 $ git clone https://github.com/danielfvm/show.git
 $ cd show
-$ python -m pip install -r requirements.txt
-$ python src/show.py
+$ poetry install
+$ poetry run show
 ```
 
 ## Usage
@@ -68,7 +68,6 @@ python src/show.py -m background -f 30 example/frag0.glsl
 ```
 python src/show.py -m background -f 30 -q 0.1 -qm pixel example/frag0.glsl
 ```
-![](screenshots/img2.webm.mov)
 
 
 
