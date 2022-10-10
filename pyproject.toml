@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Show"
-version = "0.0.0"
+version = "0.0.1"
 description = "Shaders On Wallpaper, a live and interactive wallpaper 'engine' for linux"
 authors = [
 	{ name = "danielfvm", email = "ds@xxxmail.eu"},
