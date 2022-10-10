@@ -4,11 +4,11 @@ from OpenGL import GL as gl
 import xcffib
 import xcffib.xproto
 
-from elements import *
-from utils import *
-from shader import Shader
+from show.elements import *
+from show.utils import *
+from show.shader import Shader
 
-from PboDownloader import PboDownloader
+from show.PboDownloader import PboDownloader
 
 from scipy import linalg
 
@@ -21,7 +21,7 @@ import time
 import glfw
 import sys
 
-from config import BackgroundMode, QualityMode, Config
+from show.config import BackgroundMode, QualityMode, Config
 
 log = logging.getLogger(__name__)
 

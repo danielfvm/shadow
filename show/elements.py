@@ -5,10 +5,10 @@ from OpenGL import GL as gl
 from PIL import Image
 
 import mouse
-from utils import load_file
+from show.utils import load_file
 
-from shader import Shader
-from config import Config, QualityMode
+from show.shader import Shader
+from show.config import Config, QualityMode
 
 import logging
 import glfw

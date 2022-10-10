@@ -2,8 +2,8 @@
 
 from screeninfo import get_monitors
 
-import opengl
-from config import BackgroundMode, Config, QualityMode
+from show import opengl
+from show.config import BackgroundMode, Config, QualityMode
 
 import logging
 import argparse
@@ -39,7 +39,7 @@ def parse_argument_monitor(select):
 
     return get_default_monitor()
 
-if __name__ == '__main__':
+def main():
     logging.basicConfig(level=logging.DEBUG)
 
     if not glfw.init():
@@ -92,3 +92,6 @@ if __name__ == '__main__':
         with opengl.create_vertex_buffer():
             opengl.main_loop(conn, window, files)
 
+
+if __name__ == '__main__':
+    main()
