@@ -12,7 +12,8 @@ but works on most desktop environments (Gnome, Xfce, Awesome, KDE, ...)
 * Root:
 Show will render the shader on the X11 root window.
 This mode has a lot of cpu usage and wont work in most desktop environments.
-This is only advised if the `background` mode does not work for you.
+This is only advised if the `background` mode does not work for you. Use this mode for 
+window managers like i3wm.
 
 * Window:
 This mode might be useful for shader developers.
@@ -36,6 +37,7 @@ $ cd show
 $ poetry install
 $ poetry run show
 ```
+After the installation, you can use the program by writing `show` in the terminal. For more information look at the `Usage` and `Examples` section.
 
 ## Usage
 ```
@@ -61,12 +63,12 @@ options:
 ## Examples
 #### Shader with framerate limit at 30
 ```
-python src/show.py -m background -f 30 example/frag0.glsl
+show -m background -f 30 example/frag0.glsl
 ```
 
 #### Shader with reduced quality (10%) and pixelize
 ```
-python src/show.py -m background -f 30 -q 0.1 -qm pixel example/frag0.glsl
+show -m background -f 30 -q 0.1 -qm pixel example/frag0.glsl
 ```
 
 
