@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Show"
-version = "0.0.2"
+version = "0.0.3"
 description = "Shaders On Wallpaper, a live and interactive wallpaper 'engine' for linux"
 authors = [ "DanielFvM <ds@xxxmail.eu>" ]
 license = "GPL-3.0-only"
