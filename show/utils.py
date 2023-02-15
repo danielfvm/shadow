@@ -1,3 +1,7 @@
+from OpenGL import GL as gl
+
+from show.config import Config, QualityMode
+
 import xcffib
 import cairocffi
 import cairocffi.pixbuf
@@ -6,23 +10,9 @@ import xcffib.xproto
 import struct
 import io
 
-def kill(conn, screen):
-    XA_PIXMAP = 20
-    atom = conn.core.InternAtom(True, 13, '_XROOTPMAP_ID').reply().atom
-    atom = conn.core.InternAtom(True, 16, 'ESETROOT_PMAP_ID').reply().atom
+import logging
 
-    reply = conn.core.GetProperty(
-        False, screen.root, atom, xcffib.xproto.GetPropertyType.Any, 0, 1
-    ).reply()
-
-    if reply.type == XA_PIXMAP:
-        reply = conn.core.GetProperty(
-            False, screen.root, atom, xcffib.xproto.GetPropertyType.Any, 0, 1
-        ).reply()
-
-        if reply.type == XA_PIXMAP:
-            pixmap_addr = int.from_bytes(b''.join(reply.value), byteorder='little')
-            conn.core.KillClient(pixmap_addr)
+log = logging.getLogger(__name__)
 
 def set_wallpaper_pixmap(conn, screen, pixmap):
     # remove prev: kill()
@@ -101,17 +91,45 @@ def load_pixmap(conn, screen, path):
     return pixmap
 
 
-# Origional function from "xproto.py", because of "xcffib.pack_list" 
-# it was too slow and was removed in this function.
+# Original function from "xproto.py" was because of "xcffib.pack_list" too slow,
+# this function call was removed from this function as it is not necessary.
 def PutImage(conn, format, drawable, gc, width, height, dst_x, dst_y, left_pad, depth, data, is_checked=False):
     buf = io.BytesIO()
-
     p = struct.pack("=xB2xIIHHhhBB2x", format, drawable, gc, width, height, dst_x, dst_y, left_pad, depth)
     buf.write(p)
     buf.write(data)
     conn.core.send_request(72, buf, is_checked=is_checked)
 
+def create_frametexture(width, height):
+    texture = gl.glGenTextures(1)
+    gl.glBindTexture(gl.GL_TEXTURE_2D, texture)
 
-def load_file(path):
-    with open(path, 'r') as file:
-        return file.read()
+    width = int(width * Config.QUALITY)
+    height = int(height * Config.QUALITY)
+
+    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, None)
+
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+
+    if Config.QUALITY_MODE == QualityMode.PIXEL:
+        gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+
+    return texture
+
+
+def create_framebuffer(width, height):
+    # create a new framebuffer
+    fbo = gl.glGenFramebuffers(1)
+    gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, fbo)
+
+    # create a new texture
+    texture = create_frametexture(width, height)
+
+    # apply texture to framebuffer
+    gl.glFramebufferTexture2D(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0, gl.GL_TEXTURE_2D, texture, 0)
+    gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
+
+    return texture, fbo

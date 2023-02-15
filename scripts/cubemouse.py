@@ -1,11 +1,10 @@
 import mouse
 import numpy as np
-from scipy import linalg
 
-FACTOR = 0.1 # change this
+FACTOR = 0.1 # you can change this
 
 def normalized(v):
-    norm = linalg.norm(v)
+    norm = np.linalg.norm(np.asarray_chkfinite(v), ord=None, axis=None, keepdims=False)
     return v / norm if norm > 0 else v
 
 def perspective(fov, aspect, near, far):
@@ -48,15 +47,15 @@ def create_mvp(eyeX, eyeY, eyeZ):
 currentX = 0.5
 currentY = 0.5
 
-def render(_, config):
+def render(_, show):
     global currentX, currentY
 
     mouseX, mouseY = mouse.get_position()
 
-    mouseX = mouseX / config.WIDTH
-    mouseY = 1 - mouseY / config.HEIGHT
+    mouseX = mouseX / show.width
+    mouseY = 1 - mouseY / show.height
 
     currentX += (mouseX - currentX) * FACTOR
     currentY += (mouseY - currentY) * FACTOR
 
-    config.mvp = create_mvp((0.5 - currentX) * 0.1, (0.5 - currentY) * 0.1, 1.9)
+    show.mvp = create_mvp((0.5 - currentX) * 0.1, (0.5 - currentY) * 0.1, 1.9)
