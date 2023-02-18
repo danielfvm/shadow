@@ -2,18 +2,24 @@ from abc import abstractmethod
 from threading import Thread
 from OpenGL import GL as gl
 
-from show.config import *
-from show.components import *
-from show.utils import *
-from show.shader import *
-from show.PboDownloader import *
+from .config import *
+from .components import *
+from .glutils import *
+from .shader import *
+from .PboDownloader import *
 
 import logging
-import xcffib
 import sys
 import os
 import glfw
 import ctypes
+
+if sys.platform.startswith("linux"):
+    import xcffib
+    from .xutils import *
+elif sys.platform.startswith("win"):
+    from ctypes import wintypes
+    user32 = ctypes.windll.user32
 
 log = logging.getLogger(__name__)
 
@@ -170,9 +176,9 @@ class Show():
             c.render(dt, self)
 
         # Copy rendered framebuffer to prevTexture which is being used for "prevBuffer" sampler
-        gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0);
-        gl.glActiveTexture(gl.GL_TEXTURE0);
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.prevTexture);
+        gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0)
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.prevTexture)
         gl.glCopyTexSubImage2D(gl.GL_TEXTURE_2D, 0, 0, 0, 0, 0, int(self.width * Config.QUALITY), int(self.height * Config.QUALITY));
 
         # Draw framebuffer with normal size to window
@@ -277,3 +283,51 @@ class ShowRoot(Show):
         self.conn.core.FreePixmap(self.pixmap)
         self.conn.core.FreeGC(self.gc)
         super().__del__()
+
+class ShowWin10(Show):
+    def __init__(self, monitor, files):
+        super().__init__(monitor, files, monitor.width, monitor.height)
+        
+        glfw.window_hint(glfw.DECORATED, False)
+        glfw.window_hint(glfw.FOCUSED, False)
+
+        hwnd = user32.FindWindowW("Progman", None)
+        res = ctypes.c_ulong()
+
+        user32.SendMessageTimeoutW(hwnd, 0x052C, ctypes.c_ulong(0), None, 0, 1000, ctypes.byref(res))
+
+        WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+        # Search for workerw
+        self.workerw = None
+        def enum_windows_callback(hwnd, _):
+            if user32.FindWindowExW(hwnd, None, "SHELLDLL_DefView", None) != 0:
+                self.workerw = user32.FindWindowExW(None, hwnd, "WorkerW",  None)
+            return True
+        user32.EnumWindows(WNDENUMPROC(enum_windows_callback), 0)
+
+        # Set created window as child of workerw
+        user32.SetParent(glfw.get_win32_window(self.window), self.workerw)
+
+    def swap(self):
+        glfw.swap_buffers(self.window)
+
+        # If window size changes, update width, height and framebuffer
+        nwidth, nheight = glfw.get_window_size(self.window)
+
+        if nwidth != self.width or nheight != self.height:
+            # width and height should not get to small
+            self.width = max(nwidth, 10)
+            self.height = max(nheight, 10)
+
+            # Delete existing framebuffer and create a new one with new scale
+            gl.glDeleteFramebuffers(1, self.fbo)
+            gl.glDeleteTextures(1, self.texture)
+            self.texture, self.fbo = create_framebuffer(self.width, self.height)
+
+            gl.glDeleteTextures(1, self.prevTexture)
+            self.prevTexture = create_frametexture(self.width, self.height)
+
+    def __del__(self):
+        log.debug("Remove parent")
+        user32.SetParent(self.workerw, 0)
