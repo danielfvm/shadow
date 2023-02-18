@@ -33,12 +33,12 @@ class Shader():
         gl.glLinkProgram(self.program_id)
 
         # check if linking was successful
-        result = gl.glGetProgramiv(self.program_id, gl.GL_LINK_STATUS)
+        success = gl.glGetProgramiv(self.program_id, gl.GL_LINK_STATUS)
         info_log_len = gl.glGetProgramiv(self.program_id, gl.GL_INFO_LOG_LENGTH)
-        if info_log_len:
+        if not success:
             logmsg = gl.glGetProgramInfoLog(self.program_id)
             log.error(logmsg)
-            sys.exit(11)
+            sys.exit(0)
 
         log.debug('installing shader program into rendering state')
         gl.glUseProgram(self.program_id)

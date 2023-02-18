@@ -6,8 +6,8 @@ from PIL import Image
 
 import mouse
 
-from show.shader import Shader
-from show.config import Config, QualityMode
+from .shader import Shader
+from .config import Config, QualityMode
 
 import logging
 import glfw
@@ -166,18 +166,18 @@ class ComponentAnimatedImage():
         self.frame = 0
         self.elapsed = 0
 
-    def render(self, dt, _):
+    def render(self, dt, show):
         self.elapsed += dt
 
         # scale to fit screen
-        s = max(Config.WIDTH / self.tex.width, Config.HEIGHT / self.tex.height)
+        s = max(show.width / self.tex.width, show.height / self.tex.height)
 
         w = self.tex.width * s
         h = self.tex.height * s
 
         # center image
-        x = (Config.WIDTH - w) / 2
-        y = (Config.HEIGHT - h) / 2
+        x = (show.width - w) / 2
+        y = (show.height - h) / 2
 
         if self.frame >= self.tex.n_frames - 1:
             self.frame = 0

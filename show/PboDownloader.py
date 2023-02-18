@@ -65,6 +65,3 @@ class PboDownloader():
 
         if self.num_downloads == sys.maxsize:
             self.num_downloads = self.num_pbos
-
-    gl.glBindBuffer(gl.GL_PIXEL_PACK_BUFFER, 0);
-
