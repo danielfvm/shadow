@@ -111,6 +111,7 @@ class Show():
         # that they are already initialized
         self.components = self.init_components(files)
 
+
     def __del__(self):
         log.debug('cleaning up components')
         for c in self.components:
@@ -150,9 +151,11 @@ class Show():
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         glfw.window_hint(glfw.DOUBLEBUFFER, True)
         glfw.window_hint(glfw.TRANSPARENT_FRAMEBUFFER, True)
+        glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
         log.debug('creating window')
         window = glfw.create_window(self.width, self.height, "Show", None, None)
+
         if not window:
             log.error('failed to open GLFW window.')
             sys.exit(0)
@@ -208,6 +211,7 @@ class Show():
 class ShowWindow(Show):
     def __init__(self, monitor, files, width, height):
         super().__init__(monitor, files, width, height)
+        glfw.show_window(self.window)
 
     def swap(self):
         glfw.swap_buffers(self.window)
@@ -238,14 +242,13 @@ class ShowBackground(Show):
 
         glfw.window_hint(glfw.DECORATED, False)
         glfw.window_hint(glfw.FOCUSED, False)
+        glfw.show_window(self.window)
 
     def swap(self):
         glfw.swap_buffers(self.window)
 
 class ShowRoot(Show):
     def __init__(self, monitor, files):
-        glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
-
         super().__init__(monitor, files, monitor.width, monitor.height)
 
         self.conn = xcffib.Connection(display=os.environ.get("DISPLAY"))
@@ -287,14 +290,14 @@ class ShowRoot(Show):
 class ShowWin10(Show):
     def __init__(self, monitor, files):
         super().__init__(monitor, files, monitor.width, monitor.height)
-        
+
         glfw.window_hint(glfw.DECORATED, False)
         glfw.window_hint(glfw.FOCUSED, False)
 
-        hwnd = user32.FindWindowW("Progman", None)
+        progman_hwnd = user32.FindWindowW("Progman", None)
         res = ctypes.c_ulong()
 
-        user32.SendMessageTimeoutW(hwnd, 0x052C, ctypes.c_ulong(0), None, 0, 1000, ctypes.byref(res))
+        user32.SendMessageTimeoutW(progman_hwnd, 0x052C, ctypes.c_ulong(0), None, 0, 1000, ctypes.byref(res))
 
         WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
@@ -307,7 +310,15 @@ class ShowWin10(Show):
         user32.EnumWindows(WNDENUMPROC(enum_windows_callback), 0)
 
         # Set created window as child of workerw
-        user32.SetParent(glfw.get_win32_window(self.window), self.workerw)
+        hwnd = glfw.get_win32_window(self.window)
+        user32.SetParent(hwnd, self.workerw)
+
+        # Hide window icon
+        GWL_EXSTYLE=-20
+        WS_EX_TOOLWINDOW=0x80
+
+        user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, WS_EX_TOOLWINDOW)
+        glfw.show_window(self.window)
 
     def swap(self):
         glfw.swap_buffers(self.window)
