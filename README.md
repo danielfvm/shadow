@@ -26,7 +26,7 @@ Show will create a normal window displaying the effect.
 * Opacity on wallpaper
 * Mouse position support
 * gif support
-* mp4 support (work in progress)
+* mp4 support
 * jpg/png support
 * expandable with own python scripts (work in progress)
 
