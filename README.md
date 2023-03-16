@@ -23,6 +23,7 @@ This mode spawns a window behind the desktop icons. This is the default mode for
 * Opacity on wallpaper
 * Mouse position support
 * gif support
+* mp4 support
 * jpg/png support
 * expandable with own python scripts (still work in progress)
 
