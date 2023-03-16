@@ -4,8 +4,8 @@ import importlib.util
 from OpenGL import GL as gl
 from PIL import Image
 
-from show.shader import Shader
-from show.config import Config, QualityMode
+from .shader import Shader
+from .config import Config, QualityMode
 
 import imageio
 import logging

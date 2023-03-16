@@ -6,8 +6,8 @@ from PIL import Image
 
 import mouse
 
-from show.shader import Shader
-from show.config import Config, QualityMode
+from .shader import Shader
+from .config import Config, QualityMode
 
 import logging
 import glfw
