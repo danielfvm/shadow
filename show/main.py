@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 from screeninfo import get_monitors
 
-from show.framelimiter import *
-from show.config import *
-from show.show import *
+from .framelimiter import *
+from .config import *
+from .show import *
 
 import logging
 import argparse
@@ -41,16 +41,16 @@ def main():
 
     if not glfw.init():
         log.error('failed to initialize GLFW')
-        sys.exit(0)
+        return
 
     all_args = argparse.ArgumentParser()
     all_args.add_argument("-q", "--quality", help="Changes quality level of the shader, default 1.", default=Config.QUALITY, type=float)
     all_args.add_argument("-s", "--speed", help="Changes animation speed, default 1.", default=Config.SPEED, type=float)
     all_args.add_argument("-o", "--opacity", help="Sets background window transparency, default 1.", default=Config.OPACITY, type=float)
-    all_args.add_argument("-m", "--mode", help="Changes rendering mode. Modes: root, window, background.", default=Config.BACKGROUND_MODE, type=BackgroundMode)
+    all_args.add_argument("-m", "--mode", help="Changes rendering mode. modes: root, window, background, win10.", default=Config.BACKGROUND_MODE, type=BackgroundMode)
     all_args.add_argument("-d", "--display", help="Selects a monitor", default=Config.DISPLAY, type=str)
     all_args.add_argument("-f", "--framelimit", help="Set the maximum framerate limit, default 60", default=Config.FRAMELIMIT, type=int)
-    all_args.add_argument("-qm", "--qualitymode", help="Should it pixelize or smoothen the image at lower quality? default: smooth", default=Config.QUALITY_MODE, type=QualityMode)
+    all_args.add_argument("-qm", "--qualitymode", help="Set it to pixelize or smoothen the image at lower quality. default: smooth; modes: pixel, smooth", default=Config.QUALITY_MODE, type=QualityMode)
     all_args.add_argument("-width", "--width", help="Set window width", default=900, type=int)
     all_args.add_argument("-height", "--height", help="Set window height", default=600, type=int)
 
@@ -59,7 +59,7 @@ def main():
 
     if len(files) <= 0:
         all_args.print_help()
-        exit(0)
+        return
 
     Config.QUALITY = args["quality"]
     Config.SPEED = args["speed"]
@@ -72,9 +72,20 @@ def main():
     monitor = parse_argument_monitor(Config.DISPLAY)
     frameLimiter = FrameLimiter(Config.FRAMELIMIT)
 
+    if not sys.platform.startswith("linux") and (Config.BACKGROUND_MODE == BackgroundMode.BACKGROUND or Config.BACKGROUND_MODE == BackgroundMode.ROOT):
+        print("This mode is not supported by your current operating system.")
+        print("If you are on Windows, please select the 'window' or 'win10' mode instead.")
+        return
+
+    if not sys.platform.startswith("win") and Config.BACKGROUND_MODE == BackgroundMode.WIN10:
+        print("This mode is only supported by windows.")
+        return
+
     show = None
     if Config.BACKGROUND_MODE == BackgroundMode.BACKGROUND:
         show = ShowBackground(monitor, files)
+    elif Config.BACKGROUND_MODE == BackgroundMode.WIN10:
+        show = ShowWin10(monitor, files)
     elif Config.BACKGROUND_MODE == BackgroundMode.ROOT:
         show = ShowRoot(monitor, files)
     elif Config.BACKGROUND_MODE == BackgroundMode.WINDOW:
@@ -83,7 +94,7 @@ def main():
     # this if should never be true
     if show == None:
         all_args.print_help()
-        exit(0)
+        return
 
     try:
         while show.is_running():

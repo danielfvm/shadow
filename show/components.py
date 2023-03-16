@@ -4,13 +4,14 @@ import importlib.util
 from OpenGL import GL as gl
 from PIL import Image
 
-import mouse
+from .shader import Shader
+from .config import Config, QualityMode
 
-from show.shader import Shader
-from show.config import Config, QualityMode
-
+import imageio
 import logging
+import mouse
 import glfw
+import os
 
 log = logging.getLogger(__name__)
 
@@ -166,18 +167,18 @@ class ComponentAnimatedImage():
         self.frame = 0
         self.elapsed = 0
 
-    def render(self, dt, _):
+    def render(self, dt, show):
         self.elapsed += dt
 
         # scale to fit screen
-        s = max(Config.WIDTH / self.tex.width, Config.HEIGHT / self.tex.height)
+        s = max(show.width / self.tex.width, show.height / self.tex.height)
 
         w = self.tex.width * s
         h = self.tex.height * s
 
         # center image
-        x = (Config.WIDTH - w) / 2
-        y = (Config.HEIGHT - h) / 2
+        x = (show.width - w) / 2
+        y = (show.height - h) / 2
 
         if self.frame >= self.tex.n_frames - 1:
             self.frame = 0
@@ -257,17 +258,17 @@ class ComponentImage():
                 '''
         })
 
-    def render(self, _, __):
+    def render(self, _, show):
 
         # scale to fit screen
-        s = max(Config.WIDTH / self.tex.width, Config.HEIGHT / self.tex.height)
+        s = max(show.width / self.tex.width, show.height / self.tex.height)
 
         w = self.tex.width * s
         h = self.tex.height * s
 
         # center image
-        x = (Config.WIDTH - w) / 2
-        y = (Config.HEIGHT - h) / 2
+        x = (show.width - w) / 2
+        y = (show.height - h) / 2
 
         # bind image and render it
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
@@ -286,8 +287,100 @@ class ComponentImage():
         return ".jpeg" in name or ".jpg" in name or ".png" in name or ".bmp" in name
 
 
+class ComponentVideo():
+    def __init__(self, file):
+
+        # Setup ImageIO
+        self.reader = imageio.get_reader(file, 'ffmpeg')
+
+        self.len = self.reader.count_frames()
+        metadata = self.reader.get_meta_data()
+        (self.width, self.height) = metadata["size"]
+        self.frametime = 1.0 / metadata["fps"]
+
+        # Varaibles used for calculating current frame
+        self.elapsed = 0
+        self.frame = 0
+
+        # Create Image
+        self.texture_id = gl.glGenTextures(1)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT)
+        gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_REPEAT)
+        gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+
+        # For smaller images we want them to look pixely
+        if self.width <= 256 or self.height <= 256 or Config.QUALITY_MODE == QualityMode.PIXEL:
+            gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+        else:
+            gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+
+
+        # load shader for texture
+        self.shader = Shader({
+            gl.GL_VERTEX_SHADER: '''
+                #version 330 core
+                layout(location = 0) in vec2 pos;
+
+                void main() {
+                  gl_Position.xy = pos;
+                  gl_Position.w = 1.0;
+                }
+                ''',
+            gl.GL_FRAGMENT_SHADER: '''
+                #version 330 core
+                uniform sampler2D tex;
+                uniform vec2 resolution;
+                uniform vec2 position;
+                out vec4 color;
+
+                void main() {
+                    color = texture(tex, vec2(0, 1) - (gl_FragCoord.xy / resolution.xy - position / resolution.xy));
+                }
+                '''
+        })
+
+    def render(self, dt, show):
+        self.elapsed += dt
+
+        while self.elapsed >= self.frametime / Config.SPEED:
+            self.elapsed -= self.frametime / Config.SPEED
+            self.frame += 1
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        image = self.reader.get_data(self.frame % self.len)
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, self.width, self.height, 0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, image)
+        gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
+
+        # scale to fit screen
+        s = max(show.width / self.width, show.height / self.height)
+
+        w = self.width * s
+        h = self.height * s
+
+        # center image
+        x = (show.width - w) / 2
+        y = (show.height - h) / 2
+
+        # bind image and render it
+        self.shader.bind()
+        gl.glUniform2f(self.shader.get_uniform("position"), x * Config.QUALITY, y * Config.QUALITY)
+        gl.glUniform2f(self.shader.get_uniform("resolution"), w * Config.QUALITY, h * Config.QUALITY)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+
+
+    def cleanup(self):
+        gl.glDeleteTextures(1, self.texture_id)
+        del self.shader
+
+    @staticmethod
+    def is_file(name):
+        # TODO: Make it use this list: https://imageio.readthedocs.io/en/stable/formats/video_formats.html
+        return ".mp4" in name or ".mkv" in name or ".mov" in name or ".webm" in name or ".mvi" in name or ".mjpeg" in name
+
 def create_component_from_file(file):
-    components = [ ComponentShader, ComponentScript, ComponentVideo, ComponentImage, ComponentAnimatedImage ]
+    components = [ ComponentShader, ComponentScript, ComponentVideo, ComponentImage, ComponentAnimatedImage, ComponentVideo ]
 
     for c in components:
         if c.is_file(file):

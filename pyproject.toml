@@ -7,7 +7,7 @@ license = "GPL-3.0-only"
 readme = "README.md"
 homepage = "https://github.com/danielfvm/show"
 repository = "https://github.com/danielfvm/show"
-keywords = [ "linux", "shaders", "wallpapers", "wayland", "gif-animation", "glsl-shaders", "wallpaper-engine" ]
+keywords = [ "linux", "windows", "shaders", "wallpapers", "wayland", "gif-animation", "glsl-shaders", "wallpaper-engine" ]
 packages = [ 
 	{ include = "show" }
 ]
@@ -29,6 +29,8 @@ screeninfo = "^0.8"
 mouse = "^0.7.1"
 glfw = "^2.5.3"
 Pillow = "^9.2.0"
+imageio = {extras = ["ffmpeg"], version = "^2.26.0"}
+PySimpleGUI = "^4.60.4"
 
 [tool.poetry.scripts]
 show = "show.main:main"
