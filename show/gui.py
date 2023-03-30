@@ -1,12 +1,10 @@
 import sys
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
 
-from listelements import ListWidget
-
-from tkinter.filedialog import askopenfilename
+from .listelements import ListWidget
 
 class WindowBar(QWidget):
     def __init__(self, parent=None):
@@ -17,7 +15,7 @@ class WindowBar(QWidget):
 
         self.setStyleSheet("""
             QPushButton {
-                background-color: #2980b9;
+                background-color: #252525;
                 border: none;
                 color: white;
                 padding: 25px 25px;
@@ -25,13 +23,14 @@ class WindowBar(QWidget):
                 display: inline-block;
                 font-size: 16px;
                 cursor: pointer;
-                margin: 5px 5px;
-                border-radius: 2px;
+                margin: 5px 0px;
+                border-radius: 5px;
                 font-weight: 200;
+                right: 5px;
             }
 
             QPushButton::hover {
-                background-color: #3498db;
+                background-color: #2980b9;
             }
 
             QLabel {
@@ -48,34 +47,31 @@ class WindowBar(QWidget):
         # Create the close button and add it to the layout
         self.close_btn = QPushButton("X")
         self.close_btn.clicked.connect(self.parent().close)
-        self.close_btn.setFixedWidth(40)
+        self.close_btn.setFixedSize(30, 40)
+
+        self.minimize_btn = QPushButton("_")
+        self.minimize_btn.clicked.connect(self.parent().showMinimized)
+        self.minimize_btn.setFixedSize(30, 40)
 
         # Create the layout for the window bar
         layout = QHBoxLayout()
         layout.addWidget(self.title)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, 6, 0)
+        layout.addWidget(self.minimize_btn)
         layout.addWidget(self.close_btn)
 
         # Set the layout for the window bar
         self.setLayout(layout)
 
-    def paintEvent(self, event):
+    def paintEvent(self, _):
         # Override the paintEvent to draw a border around the window bar
         painter = QPainter(self)
-        painter.fillRect(0, 0, self.width() - 1, self.height() - 1, QColor(20, 20, 20))
+        painter.fillRect(0, 0, self.width(), self.height(), QColor(20, 20, 20))
 
-    def mousePressEvent(self, event):
-        # Override the mousePressEvent to start the dragging process
-        if event.button() == Qt.LeftButton:
-            self.start_drag_pos = event.globalPos() - self.parent().pos()
-            event.accept()
-
-    def mouseMoveEvent(self, event):
-        # Override the mouseMoveEvent to move the window when dragging the window bar
-        if event.buttons() == Qt.LeftButton:
-            self.parent().move(event.globalPos() - self.start_drag_pos)
-            event.accept()
-
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            window = self.window().windowHandle()
+            window.startSystemMove()
 
 
 class TabWidget(QWidget):
@@ -83,7 +79,9 @@ class TabWidget(QWidget):
         super().__init__()
 
         # Remove the window border and set the background color to white
-        self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.center()
+
         self.setStyleSheet("""
             background-color: #303030;
             font-size: 18px;
@@ -159,7 +157,7 @@ class TabWidget(QWidget):
 
         self.list_widget = ListWidget(self.tab2)
         self.list_widget.setGeometry(0, 0, 600, 600)
-        self.list_widget.setDragDropMode(QAbstractItemView.InternalMove)
+        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
 
         add_button = QPushButton('Import', self.tab2)
         add_button.setGeometry(20, 650, 200, 50)
@@ -177,10 +175,15 @@ class TabWidget(QWidget):
         # Set the layout for the widget
         self.setLayout(layout)
 
+    def center(self):
+        qr = self.frameGeometry()
+        cp = self.screen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     widget = TabWidget()
     widget.setMinimumSize(600, 800)
     widget.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

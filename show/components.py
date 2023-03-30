@@ -7,6 +7,7 @@ from PIL import Image
 from .shader import Shader
 from .config import Config, QualityMode
 
+from fnmatch import fnmatch
 import imageio
 import logging
 import mouse
@@ -67,7 +68,7 @@ class ComponentShader():
 
     @staticmethod
     def extensions():
-        return [".glsl", ".frag", ".fshader", ".fsh"]
+        return ["*.glsl", "*.frag", "*.fshader", "*.fsh"]
 
 
 class ComponentScript():
@@ -90,8 +91,8 @@ class ComponentScript():
             self.script.cleanup()
 
     @staticmethod
-    def is_file(name):
-        return ".py" in name
+    def extensions():
+        return [ "*.py" ]
 
 class ComponentAnimatedImage():
     def __init__(self, file):
@@ -186,7 +187,7 @@ class ComponentAnimatedImage():
 
     @staticmethod
     def extensions():
-        return [ ".gif" ]
+        return [ "*.gif" ]
 
 
 class ComponentImage():
@@ -268,7 +269,7 @@ class ComponentImage():
 
     @staticmethod
     def extensions():
-        return [ ".jpeg", ".jpg", ".png", ".bmp" ]
+        return [ "*.jpeg", "*.jpg", "*.png", "*.bmp" ]
 
 
 class ComponentVideo():
@@ -361,16 +362,16 @@ class ComponentVideo():
     @staticmethod
     def extensions():
         # TODO: Make it use this list: https://imageio.readthedocs.io/en/stable/formats/video_formats.html
-        return [ ".mp4", ".mkv", ".mov", ".webm", ".mvi", ".mjpeg" ]
+        return [ "*.mp4", "*.mkv", "*.mov", "*.webm", "*.mvi", "*.mjpeg" ]
 
 
-components = [ ComponentShader, ComponentScript, ComponentVideo, ComponentImage, ComponentAnimatedImage, ComponentVideo ]
+components = [ ComponentShader, ComponentScript, ComponentImage, ComponentAnimatedImage, ComponentVideo ]
 
 def create_component_from_file(path):
     for c in components:
-        if os.path.splitext(path) == path.extensions():
-            return c(path)
+        for ext in path.extensions():
+            if fnmatch(path, ext):
+                return c(path)
 
-    log.error("Unsupported file format: " + path)
-
+    log.error("Unsupported file extension in: " + path)
     return None

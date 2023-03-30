@@ -30,7 +30,8 @@ mouse = "^0.7.1"
 glfw = "^2.5.3"
 Pillow = "^9.2.0"
 imageio = {extras = ["ffmpeg"], version = "^2.26.0"}
-PySimpleGUI = "^4.60.4"
+PyQt6 = "^6.4.2"
 
 [tool.poetry.scripts]
 show = "show.main:main"
+gui = "show.gui:main"
