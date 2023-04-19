@@ -369,7 +369,7 @@ components = [ ComponentShader, ComponentScript, ComponentImage, ComponentAnimat
 
 def create_component_from_file(path):
     for c in components:
-        for ext in path.extensions():
+        for ext in c.extensions():
             if fnmatch(path, ext):
                 return c(path)
 
