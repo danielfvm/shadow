@@ -7,6 +7,7 @@ from PIL import Image
 from .shader import Shader
 from .config import Config, QualityMode
 
+from fnmatch import fnmatch
 import imageio
 import logging
 import mouse
@@ -66,8 +67,8 @@ class ComponentShader():
         del self.shader
 
     @staticmethod
-    def is_file(name):
-        return ".glsl" in name or ".frag" in name or ".fshader" in name or ".fsh" in name
+    def extensions():
+        return ["*.glsl", "*.frag", "*.fshader", "*.fsh"]
 
 
 class ComponentScript():
@@ -90,24 +91,8 @@ class ComponentScript():
             self.script.cleanup()
 
     @staticmethod
-    def is_file(name):
-        return ".py" in name
-
-class ComponentVideo():
-    def __init__(self, file):
-        print("Video is currently not supported")
-        pass
-
-    def render(self, _):
-        pass
-
-    def cleanup(self):
-        pass
-
-
-    @staticmethod
-    def is_file(name):
-        return False #".mp4" in name or ".mkv" in name # TODO: add remaining supported filetypes
+    def extensions():
+        return [ "*.py" ]
 
 class ComponentAnimatedImage():
     def __init__(self, file):
@@ -201,8 +186,8 @@ class ComponentAnimatedImage():
         del self.shader
 
     @staticmethod
-    def is_file(name):
-        return ".gif" in name
+    def extensions():
+        return [ "*.gif" ]
 
 
 class ComponentImage():
@@ -283,8 +268,8 @@ class ComponentImage():
         del self.shader
 
     @staticmethod
-    def is_file(name):
-        return ".jpeg" in name or ".jpg" in name or ".png" in name or ".bmp" in name
+    def extensions():
+        return [ "*.jpeg", "*.jpg", "*.png", "*.bmp" ]
 
 
 class ComponentVideo():
@@ -375,17 +360,18 @@ class ComponentVideo():
         del self.shader
 
     @staticmethod
-    def is_file(name):
+    def extensions():
         # TODO: Make it use this list: https://imageio.readthedocs.io/en/stable/formats/video_formats.html
-        return ".mp4" in name or ".mkv" in name or ".mov" in name or ".webm" in name or ".mvi" in name or ".mjpeg" in name
+        return [ "*.mp4", "*.mkv", "*.mov", "*.webm", "*.mvi", "*.mjpeg" ]
 
-def create_component_from_file(file):
-    components = [ ComponentShader, ComponentScript, ComponentVideo, ComponentImage, ComponentAnimatedImage, ComponentVideo ]
 
+components = [ ComponentShader, ComponentScript, ComponentImage, ComponentAnimatedImage, ComponentVideo ]
+
+def create_component_from_file(path):
     for c in components:
-        if c.is_file(file):
-            return c(file)
+        for ext in c.extensions():
+            if fnmatch(path, ext):
+                return c(path)
 
-    log.error("Unsupported file format: " + file)
-
+    log.error("Unsupported file extension in: " + path)
     return None
