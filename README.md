@@ -83,9 +83,9 @@ show path/to/my/image.png example/expandedlife.glsl
 * Use the `--quality` option to save resources / gain more performance
 
 ## Todos
-* Rework `README.md` file to show examples with gifs
-* GUI for configuring show without terminal (and having presets)
-* Packages/Releases - Installation file for Windows
-* Testing show on win11
-* An extension based on Hanabi for better Gnome support
-* Fix mouse translations (sth related to projection matrix)
+- [ ] Rework `README.md` file to show examples with gifs
+- [ ] GUI for configuring show without terminal (and having presets)
+- [ ] Packages/Releases - Installation file for Windows
+- [ ] Testing show on win11
+- [ ] An extension based on Hanabi for better Gnome support
+- [ ] Fix mouse translations (sth related to projection matrix)
