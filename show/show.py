@@ -237,7 +237,7 @@ class ShowBackground(Show):
         super().__init__(monitor, files, monitor.width, monitor.height)
 
         conn = xcffib.Connection(display=os.environ.get("DISPLAY"))
-        #set_window_to_background(conn, glfw.get_x11_window(self.window))
+        set_window_to_background(conn, glfw.get_x11_window(self.window))
         glfw.set_window_opacity(self.window, Config.OPACITY)
 
         glfw.window_hint(glfw.DECORATED, False)
