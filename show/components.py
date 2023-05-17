@@ -12,7 +12,7 @@ import imageio
 import logging
 import mouse
 import glfw
-import os
+import numpy as np
 
 log = logging.getLogger(__name__)
 
