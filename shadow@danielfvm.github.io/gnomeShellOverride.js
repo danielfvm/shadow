@@ -26,7 +26,7 @@ const Util = imports.misc.util;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const RoundedCornersEffect = Me.imports.roundedCornersEffect;
-const applicationId = 'io.github.danielfvm.show';
+const applicationId = 'io.github.danielfvm.shadow';
 
 const getDebugMode = () => {
     return true;
@@ -309,7 +309,7 @@ var LiveWallpaper = GObject.registerClass(
 
             // Find renderer by `applicationId`.
             let renderer = window_actors.find((window) =>
-                window.meta_window.title?.includes("Show")
+                window.meta_window.title?.includes("Shadow")
             );
             if (renderer) {
                 return renderer.meta_window;

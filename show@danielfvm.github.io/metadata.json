@@ -1,7 +1,0 @@
-{
-    "uuid": "show@danielfvm.github.io",
-    "name": "Hanabi extension for Show",
-    "description": "A extension based on Hanabi that allows the Show application to work on Gnome",
-    "shell-version": ["42", "43", "44"],
-    "url": "https://github.com/danielfvm/show"
-}
