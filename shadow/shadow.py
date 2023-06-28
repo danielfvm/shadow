@@ -23,7 +23,7 @@ elif sys.platform.startswith("win"):
 
 log = logging.getLogger(__name__)
 
-class Show():
+class Shadow():
     def __init__(self, monitor, files, width, height):
         self.width = width
         self.height = height
@@ -154,7 +154,7 @@ class Show():
         glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
         log.debug('creating window')
-        window = glfw.create_window(self.width, self.height, "Show", None, None)
+        window = glfw.create_window(self.width, self.height, "Shadow", None, None)
 
         if not window:
             log.error('failed to open GLFW window.')
@@ -208,7 +208,7 @@ class Show():
     def swap(self):
         log.error('No implementation!')
 
-class ShowWindow(Show):
+class ShadowWindow(Shadow):
     def __init__(self, monitor, files, width, height):
         super().__init__(monitor, files, width, height)
         glfw.show_window(self.window)
@@ -232,7 +232,7 @@ class ShowWindow(Show):
             gl.glDeleteTextures(1, self.prevTexture)
             self.prevTexture = create_frametexture(self.width, self.height)
 
-class ShowBackground(Show):
+class ShadowBackground(Shadow):
     def __init__(self, monitor, files):
         super().__init__(monitor, files, monitor.width, monitor.height)
 
@@ -247,7 +247,7 @@ class ShowBackground(Show):
     def swap(self):
         glfw.swap_buffers(self.window)
 
-class ShowRoot(Show):
+class ShadowRoot(Shadow):
     def __init__(self, monitor, files):
         super().__init__(monitor, files, monitor.width, monitor.height)
 
@@ -287,7 +287,7 @@ class ShowRoot(Show):
         self.conn.core.FreeGC(self.gc)
         super().__del__()
 
-class ShowWin10(Show):
+class ShadowWin10(Shadow):
     def __init__(self, monitor, files):
         super().__init__(monitor, files, monitor.width, monitor.height)
 

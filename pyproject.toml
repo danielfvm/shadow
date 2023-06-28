@@ -1,20 +1,20 @@
 [tool.poetry]
-name = "Show"
+name = "Shadow Engine"
 version = "0.0.3"
-description = "Shaders On Wallpaper, a live and interactive wallpaper 'engine' for linux"
+description = "Shadow Engine is a live and interactive wallpaper engine for linux and windows 10"
 authors = [ "DanielFvM <ds@xxxmail.eu>" ]
 license = "GPL-3.0-only"
 readme = "README.md"
-homepage = "https://github.com/danielfvm/show"
-repository = "https://github.com/danielfvm/show"
+homepage = "https://github.com/danielfvm/shadow"
+repository = "https://github.com/danielfvm/shadow"
 keywords = [ "linux", "windows", "shaders", "wallpapers", "wayland", "gif-animation", "glsl-shaders", "wallpaper-engine" ]
 packages = [ 
-	{ include = "show" }
+	{ include = "shadow" }
 ]
 
 [tool.poetry.urls]
-"Homepage" = "https://github.com/danielfvm/show"
-"Bug Tracker" = "https://github.com/danielfvm/show/issues"
+"Homepage" = "https://github.com/danielfvm/shadow"
+"Bug Tracker" = "https://github.com/danielfvm/shadow/issues"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -33,5 +33,5 @@ imageio = {extras = ["ffmpeg"], version = "^2.26.0"}
 PyQt6 = "^6.4.2"
 
 [tool.poetry.scripts]
-show = "show.main:main"
-gui = "show.gui:main"
+show = "shadow.main:main"
+gui = "shadow.gui:main"
