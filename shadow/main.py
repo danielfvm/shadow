@@ -3,7 +3,7 @@ from screeninfo import get_monitors
 
 from .framelimiter import *
 from .config import *
-from .show import *
+from .shadow import *
 
 import logging
 import argparse
@@ -83,13 +83,13 @@ def main():
 
     show = None
     if Config.BACKGROUND_MODE == BackgroundMode.BACKGROUND:
-        show = ShowBackground(monitor, files)
+        show = ShadowBackground(monitor, files)
     elif Config.BACKGROUND_MODE == BackgroundMode.WIN10:
-        show = ShowWin10(monitor, files)
+        show = ShadowWin10(monitor, files)
     elif Config.BACKGROUND_MODE == BackgroundMode.ROOT:
-        show = ShowRoot(monitor, files)
+        show = ShadowRoot(monitor, files)
     elif Config.BACKGROUND_MODE == BackgroundMode.WINDOW:
-        show = ShowWindow(monitor, files, int(args["width"]), int(args["height"]))
+        show = ShadowWindow(monitor, files, int(args["width"]), int(args["height"]))
 
     # this if should never be true
     if show == None:
