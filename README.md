@@ -1,5 +1,5 @@
 # Shadow Engine
-Shadow Engine stands for `Shaders On Wallpaper` and it renders a realtime glsl shader on your Linux or Windows desktop. It is compatible with most shaders from [glslsandbox.com](http://glslsandbox.com/). Additionally you can put multiple shaders, images, videos and interactive scripts on top of each other to create an amazing looking desktop.
+Shadow Engine stands for `Shaders On Wallpaper Engine` and it renders a realtime glsl shader on your Linux or Windows desktop. It is compatible with most shaders from [glslsandbox.com](http://glslsandbox.com/). Additionally you can put multiple shaders, images, videos and interactive scripts on top of each other to create an amazing looking desktop.
 
 To support different desktop environments and operating systems there are different render modes one can select from:
 
