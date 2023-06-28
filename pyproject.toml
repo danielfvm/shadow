@@ -33,5 +33,5 @@ imageio = {extras = ["ffmpeg"], version = "^2.26.0"}
 PyQt6 = "^6.4.2"
 
 [tool.poetry.scripts]
-show = "shadow.main:main"
+shadow = "shadow.main:main"
 gui = "shadow.gui:main"
