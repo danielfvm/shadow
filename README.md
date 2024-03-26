@@ -1,4 +1,9 @@
 # Shadow Engine
+![Repository size](https://img.shields.io/github/repo-size/danielfvm/shadow?color=39d45f) 
+[![GitHub last commit](https://img.shields.io/github/last-commit/danielfvm/shadow?color=39d45f)](https://github.com/danielfvm/shadow/commits/master) 
+![License](https://img.shields.io/badge/license-GPL-39d45f) 
+[![Stargazers](https://img.shields.io/github/stars/danielfvm/shadow?color=39d45f&logo=github)](https://github.com/danielfvm/shadow/stargazers)
+
 Shadow Engine stands for `Shaders On Wallpaper Engine` and it renders a realtime glsl shader on your Linux or Windows desktop. It is compatible with most shaders from [glslsandbox.com](http://glslsandbox.com/). Additionally you can put multiple shaders, images, videos and interactive scripts on top of each other to create an amazing looking desktop.
 
 To support different desktop environments and operating systems there are different render modes one can select from:
