@@ -5,3 +5,4 @@ screeninfo==0.8
 mouse==0.7.1
 glfw==2.5.3
 scipy==1.8.1
+pillow==10.0.0
