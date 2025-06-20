@@ -1,3 +1,5 @@
+#version 330 core
+
 uniform vec2 resolution;
 uniform float time;
 uniform vec2 mouse;
@@ -63,6 +65,7 @@ vec3 palette(in float t) {
   return a + b * cos(6.28318 * (c * t + d));
 }
 
+layout(location = 0) out vec4 diffuseColor;
 void main() {
   vec2 p = gl_FragCoord.xy / resolution.xy;
   p.x *= resolution.x / resolution.y;
@@ -70,5 +73,5 @@ void main() {
   float value = pow(pattern(p), 2.);
   vec3 color  = palette(value);
 
-  gl_FragColor = vec4(color, 1.);
+  diffuseColor = vec4(color, 1.);
 }

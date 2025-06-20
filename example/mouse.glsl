@@ -1,3 +1,5 @@
+#version 330 core
+
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -31,6 +33,7 @@ vec2 limit(vec2 v) {
 	return v/sqrt(v.x*v.x+v.y*v.y+9.0);
 }
 
+layout(location = 0) out vec4 diffuseColor;
 void main( void ) {
 	
 	float scaling_factor = resolution.x / resolution.y;
@@ -51,6 +54,6 @@ void main( void ) {
 	color +=  0.1 / abs(ellipse(0.5, Mouse, Right*limit(Mouse)*0.25, Screen));
 	color += 01.01 / abs(lines(0.5, Mouse, Screen)) * btw(add(Mouse*Screen), (-0.01*add(Mouse*Mouse)), (add(Mouse*Mouse)));
 
-	gl_FragColor = vec4( vec3( color*1.0, color*0.2, color*0.7 ), color / 2.0 );
+	diffuseColor = vec4( vec3( color*1.0, color*0.2, color*0.7 ), color / 2.0 );
 
 }

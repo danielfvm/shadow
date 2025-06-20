@@ -10,6 +10,7 @@ uniform vec2 mouse;
 uniform sampler2D prevBuffer;
 uniform sampler2D currentBuffer;
 
+layout(location = 0) out vec4 diffuseColor;
 void main() {
 	vec2 p = gl_FragCoord.xy;
 
@@ -32,5 +33,5 @@ void main() {
 	  }
 	}
 
-	gl_FragColor = vec4(vec3(colors[4]), 1.0);
+	diffuseColor = vec4(vec3(colors[4]), 1.0);
 }
