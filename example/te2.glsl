@@ -1,3 +1,5 @@
+#version 330 core
+
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -254,6 +256,7 @@ vec3 Text(vec2 uv)
     	return col;
 }
 
+layout(location = 0) out vec4 diffuseColor;
 void main( void )
 {
 	vec2 uv = gl_FragCoord.xy / DOWN_SCALE;
@@ -264,5 +267,5 @@ void main( void )
 	vec3 col = pixel*0.9+0.1;
 	col *= (1.-distance(mod(uv,vec2(1.0)),vec2(0.65)))*1.2;
 	
-	gl_FragColor = vec4(vec3(col), pow(col.r + col.g + col.b, 2.0));
+	diffuseColor = vec4(vec3(col), pow(col.r + col.g + col.b, 2.0));
 }

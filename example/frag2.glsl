@@ -1,7 +1,7 @@
 /*
  * Original shader from: https://www.shadertoy.com/view/Wscyz2
  */
-
+#version 330 core
 
 #ifdef GL_ES
 precision highp float;
@@ -122,7 +122,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 // --------[ Original ShaderToy ends here ]---------- //
 
+layout(location = 0) out vec4 diffuseColor;
 void main(void)
 {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
+    mainImage(diffuseColor, gl_FragCoord.xy);
 }

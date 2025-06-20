@@ -1,3 +1,5 @@
+#version 330 core
+
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -50,6 +52,7 @@ float field(in vec3 p) {
 
 
 
+layout(location = 0) out vec4 diffuseColor;
 void main() {   
      	vec2 uv2 = 2. * gl_FragCoord.xy / vec2(512) - 1.;
 	vec2 uvs = uv2 * vec2(512)  / 512.;
@@ -166,7 +169,7 @@ void main() {
 	backCol2.b = 0.5*mix(backCol2.g, backCol2.b, 0.8);
 	backCol2.g = 0.0;
 	backCol2.bg = mix(backCol2.gb, backCol2.bg, 0.5*(cos(time*0.01) + 1.0));	
-	gl_FragColor = forCol2 * vec4(vec3(1), pow(forCol2.r * forCol2.g * forCol2.b, 0.6));
+	diffuseColor = forCol2 * vec4(vec3(1), pow(forCol2.r * forCol2.g * forCol2.b, 0.6));
 }
 
 

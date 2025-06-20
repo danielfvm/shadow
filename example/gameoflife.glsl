@@ -13,6 +13,8 @@ float random (in vec2 point) {
 	return fract(100.0 * sin(point.x + fract(100.0 * sin(point.y)))); // http://www.matteo-basei.it/noise
 }
 
+layout(location = 0) out vec4 diffuseColor;
+
 void main() {
 	vec2 p = gl_FragCoord.xy;
 
@@ -39,5 +41,5 @@ void main() {
 		color = random(p) > 0.5 ? vec3(1) : vec3(0);
 	}
 
-	gl_FragColor = vec4(color, 1.);
+	diffuseColor = vec4(color, 1.);
 }
