@@ -290,15 +290,16 @@ class ShadowRoot(Shadow):
 
 class ShadowWin10(Shadow):
     def __init__(self, monitor, files):
+        # We have to set these hints before the window is created and positioned
+        glfw.window_hint(glfw.DECORATED, False)
+        glfw.window_hint(glfw.FOCUSED, False)
+        
         # On Windows, the screen-space coordinate system is relative to the primary monitor,
         # and weirdly different in other places. Calculating the (negative) topleft-most coordinate
         # of any monitor, then using *the double of* that as an offset for each window,
         # seems to solve the discrepancies.
         monitor_offset = reduce(lambda acc, m: (max(acc[0], -m.x), max(acc[1], -m.y)), get_monitors(), (0, 0))
         super().__init__(monitor, files, monitor.width, monitor.height, monitor_offset)
-
-        glfw.window_hint(glfw.DECORATED, False)
-        glfw.window_hint(glfw.FOCUSED, False)
 
         progman_hwnd = user32.FindWindowW("Progman", None)
         res = ctypes.c_ulong()
