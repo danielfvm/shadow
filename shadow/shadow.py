@@ -294,7 +294,7 @@ class ShadowWin10(Shadow):
         # and weirdly different in other places. Calculating the (negative) topleft-most coordinate
         # of any monitor, then using *the double of* that as an offset for each window,
         # seems to solve the discrepancies.
-        monitor_offset = reduce(lambda acc, m: (max(acc[0], -2*m.x), max(acc[1], -2*m.y)), get_monitors(), (0, 0))
+        monitor_offset = reduce(lambda acc, m: (max(acc[0], -m.x), max(acc[1], -m.y)), get_monitors(), (0, 0))
         super().__init__(monitor, files, monitor.width, monitor.height, monitor_offset)
 
         glfw.window_hint(glfw.DECORATED, False)
