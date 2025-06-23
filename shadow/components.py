@@ -180,8 +180,7 @@ class ComponentAnimatedImage():
 
 
     def cleanup(self):
-        for texID in self.textures:
-            gl.glDeleteTextures(1, texID)
+        gl.glDeleteTextures(len(self.textures), self.textures)
 
         del self.shader
 
@@ -264,7 +263,7 @@ class ComponentImage():
 
 
     def cleanup(self):
-        gl.glDeleteTextures(1, self.texture_id)
+        gl.glDeleteTextures(1, [self.texture_id])
         del self.shader
 
     @staticmethod
@@ -356,7 +355,7 @@ class ComponentVideo():
 
 
     def cleanup(self):
-        gl.glDeleteTextures(1, self.texture_id)
+        gl.glDeleteTextures(1, [self.texture_id])
         del self.shader
 
     @staticmethod

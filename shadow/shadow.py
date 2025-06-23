@@ -125,8 +125,8 @@ class Shadow():
         gl.glDeleteVertexArrays(1, [self.vertex_array_id])
 
         log.debug('deleting framebuffer and texture')
-        gl.glDeleteFramebuffers(1, self.fbo)
-        gl.glDeleteTextures(1, self.texture)
+        gl.glDeleteFramebuffers(1, [self.fbo])
+        gl.glDeleteTextures(2, [self.texture, self.prevTexture])
 
         log.debug('closing glfw')
         glfw.terminate()
@@ -225,11 +225,10 @@ class ShadowWindow(Shadow):
             self.height = max(nheight, 10)
 
             # Delete existing framebuffer and create a new one with new scale
-            gl.glDeleteFramebuffers(1, self.fbo)
-            gl.glDeleteTextures(1, self.texture)
+            gl.glDeleteFramebuffers(1, [self.fbo])
+            gl.glDeleteTextures(2, [self.texture, self.prevTexture])
+            
             self.texture, self.fbo = create_framebuffer(self.width, self.height)
-
-            gl.glDeleteTextures(1, self.prevTexture)
             self.prevTexture = create_frametexture(self.width, self.height)
 
 class ShadowBackground(Shadow):
@@ -332,11 +331,10 @@ class ShadowWin10(Shadow):
             self.height = max(nheight, 10)
 
             # Delete existing framebuffer and create a new one with new scale
-            gl.glDeleteFramebuffers(1, self.fbo)
-            gl.glDeleteTextures(1, self.texture)
+            gl.glDeleteFramebuffers(1, [self.fbo])
+            gl.glDeleteTextures(2, [self.texture, self.prevTexture])
+            
             self.texture, self.fbo = create_framebuffer(self.width, self.height)
-
-            gl.glDeleteTextures(1, self.prevTexture)
             self.prevTexture = create_frametexture(self.width, self.height)
 
     def __del__(self):
