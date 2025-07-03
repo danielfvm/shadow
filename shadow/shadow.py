@@ -318,7 +318,7 @@ class ShadowWin10(Shadow):
 
         # Set created window as child of workerw
         hwnd = glfw.get_win32_window(self.window)
-        user32.SetParent(hwnd, self.workerw)
+        user32.SetParent(hwnd, self.workerw if self.workerw else progman_hwnd)
 
         # Hide window icon
         GWL_EXSTYLE=-20
