@@ -1,7 +1,0 @@
-{
-    "uuid": "shadow@danielfvm.github.io",
-    "name": "Shadow Engine",
-    "description": "An extension based on Hanabi that allows the shadow engine to work on Gnome",
-    "shell-version": ["42", "43", "44"],
-    "url": "https://github.com/danielfvm/shadow"
-}
